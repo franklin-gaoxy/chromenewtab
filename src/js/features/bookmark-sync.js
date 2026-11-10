@@ -1,9 +1,10 @@
 /* ============================================================
  * 书签 ↔ 主页 双向同步（显示在右侧书签侧边栏内）
  *
- * 主页 → 书签：在指定书签目录下按分组创建同名文件夹，逐个写入网站
+ * 主页 → 书签：在指定书签目录下按分组创建同名文件夹，逐个写入网站；
+ *              主页里的文件夹会建成同名书签子文件夹（只一层）
  * 书签 → 主页：把指定目录的书签导入指定分组，两种模式
- *   - recursive：递归包含所有子目录，去掉层级后平铺进分组
+ *   - keep：保留一级目录，子目录在主页生成同名文件夹，其中的书签（含更深层级）全部放进去
  *   - flat：只取该目录下直接包含的书签，忽略子目录
  * ============================================================ */
 
@@ -99,7 +100,7 @@ function renderBookmarkSyncBody() {
 
   if (bmSyncTab === 'toBookmarks') {
     box.innerHTML =
-      '<p class="bm-sync-tip">在所选目录下为每个分组创建一个同名文件夹，把主页图标写进去；已存在的同名书签会跳过。</p>' +
+      '<p class="bm-sync-tip">在所选目录下为每个分组创建一个同名文件夹，把主页图标写进去；主页里的文件夹会建成同名子文件夹（只一层）。已存在的同名书签会跳过。</p>' +
       '<label class="bm-field"><span>目标书签目录</span><select id="bmTargetFolder">' + folderOptions + '</select></label>' +
       '<button class="bm-run" id="bmRunToMarks" type="button">同步到书签</button>' +
       '<p class="bm-sync-status" id="bmSyncStatus"></p>';
@@ -115,12 +116,12 @@ function renderBookmarkSyncBody() {
     .join('');
 
   box.innerHTML =
-    '<p class="bm-sync-tip">把所选目录里的书签导入指定分组，按网址去重。</p>' +
+    '<p class="bm-sync-tip">把所选目录里的书签导入指定分组，按网址去重。文件夹只保留一层。</p>' +
     '<label class="bm-field"><span>源书签目录</span><select id="bmSourceFolder">' + folderOptions + '</select></label>' +
     '<label class="bm-field"><span>目标分组</span><select id="bmTargetGroup">' + groupOptions + '</select></label>' +
     '<div class="bm-mode">' +
-      '<label><input type="radio" name="bmSyncMode" value="recursive" checked />' +
-        '<span>递归：包含所有子目录中的书签，去掉目录层级后平铺进该分组</span></label>' +
+      '<label><input type="radio" name="bmSyncMode" value="keep" checked />' +
+        '<span>保留一级目录：子目录在主页生成同名文件夹，其中的书签（含更深层级）都收进该文件夹</span></label>' +
       '<label><input type="radio" name="bmSyncMode" value="flat" />' +
         '<span>仅当前目录：只同步该目录下直接包含的书签，子目录忽略</span></label>' +
     '</div>' +
@@ -132,7 +133,7 @@ function renderBookmarkSyncBody() {
     runBmSync('bmRunToGroups', $('bmSyncStatus'), doSyncBookmarksToGroup, {
       sourceId: $('bmSourceFolder').value,
       groupId: $('bmTargetGroup').value,
-      recursive: !modeInput || modeInput.value === 'recursive'
+      keepFolders: !modeInput || modeInput.value === 'keep'
     });
   });
 }
@@ -164,27 +165,37 @@ async function doSyncGroupsToBookmarks(parentId) {
   let skipped = 0;
   let groupsTouched = 0;
 
+  // 把一批站点写进某个书签目录，按 url 去重
+  const writeSites = async (folderId, sites) => {
+    const children = await chrome.bookmarks.getChildren(folderId);
+    const urls = new Set(children.filter((c) => c.url).map((c) => c.url));
+
+    for (const site of sites) {
+      const url = normalizeUrl(site.url);
+      if (!url) continue; // 组件没有网址，跳过
+      if (urls.has(url)) {
+        skipped += 1;
+        continue;
+      }
+      await chrome.bookmarks.create({ parentId: folderId, title: site.title || url, url });
+      urls.add(url);
+      created += 1;
+    }
+  };
+
   for (const group of state.groups) {
     const folder = await bmEnsureFolder(parentId, group.name);
     if (folder.created) foldersMade += 1;
     groupsTouched += 1;
 
-    const children = await chrome.bookmarks.getChildren(folder.id);
-    const urls = new Set(children.filter((c) => c.url).map((c) => c.url));
+    await writeSites(folder.id, group.items.filter((it) => it.kind !== 'folder' && it.url));
 
+    // 主页文件夹 → 同名书签子文件夹（只一层，内部是站点）
     for (const item of group.items) {
-      if (!item.url) continue; // 组件没有网址，跳过
-      if (urls.has(item.url)) {
-        skipped += 1;
-        continue;
-      }
-      await chrome.bookmarks.create({
-        parentId: folder.id,
-        title: item.title || item.url,
-        url: item.url
-      });
-      urls.add(item.url);
-      created += 1;
+      if (item.kind !== 'folder' || !item.items.length) continue;
+      const sub = await bmEnsureFolder(folder.id, item.title);
+      if (sub.created) foldersMade += 1;
+      await writeSites(sub.id, item.items);
     }
   }
 
@@ -203,19 +214,19 @@ async function bmEnsureFolder(parentId, title) {
 
 /* ---------------- 书签 → 主页 ---------------- */
 async function doSyncBookmarksToGroup(options) {
-  const { sourceId, groupId, recursive } = options || {};
+  const { sourceId, groupId, keepFolders } = options || {};
   if (!sourceId) throw new Error('请选择源目录');
 
   const group = groupById(groupId);
   if (!group) throw new Error('目标分组不存在');
 
-  const found = await bmCollectUrls(sourceId, !!recursive);
-  const existing = new Set(group.items.filter((it) => it.url).map((it) => it.url));
-
+  const existing = collectGroupUrls(group);
   let added = 0;
   let skipped = 0;
+  let foldersAdded = 0;
 
-  found.forEach((node) => {
+  // 写入目标数组，按 url 去重
+  const pushSite = (list, node) => {
     const url = normalizeUrl(node.url);
     if (!url) {
       skipped += 1;
@@ -226,33 +237,58 @@ async function doSyncBookmarksToGroup(options) {
       return;
     }
     existing.add(url);
-    group.items.push({
+    list.push({
       id: uid('i'),
       title: String(node.title || suggestTitle(url)).slice(0, 40),
       url,
       icon: ''
     });
     added += 1;
+  };
+
+  const children = await chrome.bookmarks.getChildren(sourceId);
+
+  // 1) 目录下直接包含的书签 → 分组根
+  children.forEach((node) => {
+    if (node.url) pushSite(group.items, node);
   });
+
+  // 2) 一级子目录 → 主页文件夹；更深层级全部摊平进这个文件夹
+  if (keepFolders) {
+    for (const node of children) {
+      if (node.url) continue;
+      const inner = await bmCollectUrls(node.id);
+      if (!inner.length) continue;
+
+      const title = String(node.title || '文件夹').slice(0, 20);
+      const target = { id: uid('f'), kind: 'folder', title, items: [] };
+      inner.forEach((site) => pushSite(target.items, site));
+      if (!target.items.length) continue;
+
+      // 同名文件夹已存在时并进去，避免重复
+      const same = group.items.find((it) => it.kind === 'folder' && it.title === title);
+      if (same) same.items.push(...target.items);
+      else group.items.push(target);
+      foldersAdded += 1;
+    }
+  }
 
   save();
   renderAll();
 
-  return '已导入「' + group.name + '」：新增 ' + added + ' 条，跳过 ' + skipped + ' 条（重复或非网页地址）';
+  return '已导入「' + group.name + '」：新增 ' + added + ' 条' +
+    (keepFolders ? '、文件夹 ' + foldersAdded + ' 个' : '') +
+    '，跳过 ' + skipped + ' 条（重复或非网页地址）';
 }
 
-async function bmCollectUrls(folderId, recursive) {
+/* 递归收集某个目录下的全部书签（用于摊平进主页文件夹） */
+async function bmCollectUrls(folderId) {
   const out = [];
   const children = await chrome.bookmarks.getChildren(folderId);
 
   for (const child of children) {
-    if (child.url) {
-      out.push({ title: child.title, url: child.url });
-      continue;
-    }
-    if (recursive) {
-      out.push(...(await bmCollectUrls(child.id, true)));
-    }
+    if (child.url) out.push({ title: child.title, url: child.url });
+    else out.push(...(await bmCollectUrls(child.id)));
   }
 
   return out;

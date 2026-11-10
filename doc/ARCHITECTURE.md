@@ -21,7 +21,9 @@
 ├─ dist/                      发布包 zip（内容清单见 doc/BACKUP-MANIFEST.md）
 ├─ doc/                       文档（本文件、AI-GUIDE、协议、备份清单）
 ├─ server/                    QSP v1 示例服务端（Node，无依赖）
-├─ tools/gen_assets.py        生成图标与矢量背景，输出到 src/assets
+├─ tools/
+│  ├─ gen_assets.py           生成图标与矢量背景，输出到 src/assets
+│  └─ smoke/                  页面冒烟测试：run.js（运行器）+ cases.js（用例）
 └─ src/                       ★ 全部扩展源码
    ├─ newtab.html             页面骨架 + CSS/JS 加载顺序（唯一入口）
    ├─ assets/                 图标 icon16/32/48/128.png、背景 bg-forest.webp/svg
@@ -38,6 +40,7 @@
    │  ├─ widgets.css          组件磁贴样式 + 添加组件弹窗
    │  ├─ ai.css               AI 对话弹窗（会话栏 / 消息 / 输入区 / 设置层）
    │  ├─ bookmarks.css        浏览器书签侧边栏（悬浮按钮 / 树 / 搜索 / 同步面板）
+   │  ├─ folder.css           文件夹磁贴与毛玻璃面板
    │  └─ responsive.css       媒体查询断点（最后加载）
    └─ js/
       ├─ store.js             常量与数据层：搜索引擎、背景预设、默认数据、normalizeData、store 封装、工具函数（uid/esc/URL/favicon）
@@ -53,7 +56,8 @@
       │  ├─ preferences.js    主题与布局：backgroundImageFor、applySettings、perRow、perPage、applyGridLayout
       │  ├─ rail.js           分组栏渲染、选择、重命名、新建
       │  ├─ search.js         搜索分类、引擎切换、doSearch
-      │  ├─ grid.js           可见列表、分页、磁贴、拖拽排序、renderAll
+      │  ├─ grid.js           可见列表、分页、磁贴、拖拽排序/合并落点、renderAll
+      │  ├─ folder.js         文件夹：拖拽合并、磁贴预览、毛玻璃面板、重命名/解散/删除
       │  ├─ menu.js           右键菜单、站点/分组增删、openCanvasMenu（右键入口）
       │  ├─ modal.js          openModal/closeModal/openSettingsPanel + 通用关闭绑定
       │  ├─ link-modal.js     站点编辑弹窗与表单校验
@@ -76,7 +80,7 @@
 
 **加载顺序（`src/newtab.html` 必须与之一致）**
 `store.js` → `core/*` → `features/*` → `widgets/registry.js` → `widgets/picker.js` → `widgets/clock.js` → `widgets/ai/*` → `main.js`。
-features 内部：`bookmarks.js` 早于 `bookmark-sync.js`（后者复用前者的面板与 `bmLoadTree()`）。
+features 内部：`bookmarks.js` 早于 `bookmark-sync.js`（后者复用前者的面板与 `bmLoadTree()`）；`folder.js` 紧跟在 `grid.js` 之后（`grid.js` 渲染时调用 `createFolderTile()` / `refreshOpenFolder()`，拖拽落点调用 `canMergeItems()` / `mergeItems()`）。
 原因：`WidgetRegistry` 是 `const`，各组件文件在顶层立即调用 `register`，因此必须在 registry 之后；`main.js` 最后执行 `init()`。
 
 ---
@@ -110,16 +114,19 @@ state = {
 }
 ```
 
-`Item` 有两种形态，靠 `kind` 区分：
+`Item` 有三种形态，靠 `kind` 区分：
 
 ```js
 // 网站
 { id, title, url, icon }
 // 组件
 { id, kind: 'widget', widget: 'clock' | 'ai' | ..., title, config: {} }
+// 文件夹（只允许一层，内部只能是网站，不允许嵌套）
+{ id, kind: 'folder', title, items: [{ id, title, url, icon }] }
 ```
 
 `normalizeData()`（store.js）负责旧数据兜底与非法数据过滤，**新增字段时必须在这里补默认值**。
+条目归一化拆成了 `normalizeItem()`（三分支）与 `normalizeSite()`；文件夹内部的嵌套文件夹与组件会被丢弃，保证「一层」约束。
 
 ### 2.2 同步状态（`syncState`，存储 key `qihang-sync-v1`）
 
@@ -158,8 +165,11 @@ aiData = {
 3. 没有页可翻 → 切换分组，首尾循环（最后一个 ↓ 回到第一个，第一个 ↑ 回到最后一个）；切换后向下置顶、向上置底，并用 420ms 锁避免连续触发。
 搜索状态、侧边栏 / 弹窗 / 菜单内的滚动都不参与这套逻辑。
 
-### 3.3 拖拽排序
-`attachTileDrag()`（grid.js）为网站磁贴与组件磁贴共用；`moveItem()` 修改 `items` 顺序后 `save() + renderAll()`。
+### 3.3 拖拽排序与合并
+`attachTileDrag()`（grid.js）为网站 / 文件夹 / 组件磁贴共用；`dragState` 里带上被拖的 `item`。
+落点由 `dropZone()` 计算：可合并时左 30% 为 `before`、右 30% 为 `after`、中间为 `merge`（`.drop-merge` 高亮）；组件不参与合并，退化为左右两半插入。
+- 插入：`moveItem()` 修改 `items` 顺序后 `save() + renderAll()`。
+- 合并：`mergeItems()`（folder.js），见 3.8。
 拖到网格空白处由 `bindGridEvents()` 的 `#grid` drop 处理（追加到当前分组末尾）。
 
 ### 3.4 组件
@@ -182,11 +192,22 @@ aiData = {
 入口：空白处右键 → 「同步书签」→ `openBookmarkSync()` → `openBookmarkPanel(true)` → `showBookmarkSync()` → `renderBookmarkSync()` → `renderBookmarkSyncBody()`。
 
 - **主页 → 书签**（`doSyncGroupsToBookmarks`）：
-  遍历 `state.groups`，在所选目录下 `bmEnsureFolder()` 找/建同名文件夹，再逐个 `chrome.bookmarks.create()` 写入网站；按 url 去重，组件（无 url）跳过。
+  遍历 `state.groups`，在所选目录下 `bmEnsureFolder()` 找/建同名文件夹，再用内部 `writeSites()` 逐个 `chrome.bookmarks.create()` 写入网站；分组里的文件夹再 `bmEnsureFolder()` 建一层同名子文件夹后写入（只一层），按 url 去重，组件（无 url）跳过。
 - **书签 → 主页**（`doSyncBookmarksToGroup`）：
-  `bmCollectUrls(folderId, recursive)` 取书签；`recursive` 时递归全部子目录并去掉层级平铺，否则只取直接子项。导入前用 `normalizeUrl` 过滤非网页地址，按 url 与分组现有项去重，写入后 `save() + renderAll()`。
+  先取源目录直接子项：书签直接进分组；`keepFolders` 为真时，每个一级子目录生成一个主页文件夹，`bmCollectUrls()` 递归摊平该子目录下的全部书签并放进去（更深层级不再产生新文件夹）。导入前用 `normalizeUrl` 过滤非网页地址，按 url 与分组现有项（`collectGroupUrls()`）去重；同名文件夹已存在则并入。写入后 `save() + renderAll()`。
 
-两种模式由面板内单选决定：`recursive`（递归）/ `flat`（仅当前目录）。
+两种模式由面板内单选决定：`keep`（保留一级目录，默认）/ `flat`（仅当前目录）。
+
+### 3.8 文件夹（只一层）
+- 入口：磁贴拖到另一个磁贴中间 → `mergeItems(fromGroupId, fromId, toGroupId, toId)`（folder.js）。
+  - 目标是文件夹 → 把源摊平后的站点追加进去；
+  - 目标是站点 → 在目标位置新建 `kind:'folder'`，包含两者（文件夹标题沿用源的）。
+  - 源 / 目标是组件时不合并；跨分组同样适用（先摘除源，再按 id 重新定位目标，避免同组下标错位）。
+- 渲染：`renderGrid()` 按 `item.kind` 分派，文件夹走 `createFolderTile()` → `fillFolderPreview()` 画 2×2 预览（超过 4 个时第 4 格显示 `+n`）。
+- 面板：点击文件夹 → `openFolder()` → `$('folderMask')` + `$('folderPanel')`（`css/folder.css`，`backdrop-filter: blur()` 毛玻璃），内容由 `renderFolderPanel()` 生成；位置以磁贴 `rect` 为锚点，`renderGrid()` 结尾调用 `refreshOpenFolder()` 同步数据变化。关闭走 `closeFolder()`（遮罩 / X / `Esc`）。
+- 管理：`openFolderMenu()`（打开 / 重命名 / 解散 / 删除）、`openFolderItemMenu()`（打开 / 复制 / 编辑 / 移出 / 删除）；`dissolveFolder()` 把站点按原顺序放回分组。
+- 定位工具：`findItemEntry()`（data.js，会进一层文件夹）、`collectGroupUrls()`（含文件夹内网址）、`groupOfFolder()` / `findFolder()`（folder.js）。
+- 数据约束：文件夹里只能是网站（`normalizeItem()` 丢弃嵌套文件夹与组件），因此不存在多层结构。
 
 ---
 
@@ -241,6 +262,7 @@ WidgetRegistry.register({
 - 入口：`src/js/features/menu.js` 的「同步书签」+ `openBookmarkPanel(true)`
 
 注意事项：`chrome.bookmarks` 只在扩展环境可用，非扩展会自动提示；`manifest.json` 的 `permissions` 必须保留 `bookmarks`，否则面板与同步都不可用。
+层级约定是「书签目录 ↔ 主页文件夹只对应一层」：改这里要同时看 3.8 与第 5 节，别把 `bmCollectUrls()` 的摊平逻辑改成新建多层文件夹（数据模型不支持嵌套）。
 
 ---
 
@@ -250,16 +272,55 @@ WidgetRegistry.register({
 
 | 位置 | 作用 |
 | --- | --- |
-| `store.js` `normalizeData()` | 旧数据兜底、字段过滤、默认值 |
+| `store.js` `normalizeItem()` / `normalizeSite()` / `normalizeData()` | 旧数据兜底、字段过滤、默认值、文件夹一层约束 |
 | `store.js` `defaultData()` | 首次安装的默认数据 |
 | `features/sync.js` `buildSyncPayload()` | 上传字段白名单（漏了会被同步丢弃） |
 | `features/sync.js` `mergeGroups()` | 合并时的字段重建规则 |
-| `features/backup.js` `exportData()` | 直接序列化 `state`，一般无需改 |
-| `features/grid.js` `createTile()` / `createWidgetTile()` | 渲染与交互 |
-| `features/grid.js` `visibleList()` | 搜索匹配字段 |
-| `features/bookmark-sync.js` 导入 / 导出 | 书签与 Item 的字段映射（组件无 url，写入时跳过） |
+| `features/backup.js` `exportData()` | 直接序列化 `state`，一般无需改（文件夹天然带结构） |
+| `features/backup.js` `buildBookmarksHtml()` | 导出书签 HTML 的层级（分组 / 文件夹各一层） |
+| `features/grid.js` `createTile()` / `createWidgetTile()` / `createFolderTile()` | 渲染与交互 |
+| `features/grid.js` `visibleList()` | 搜索匹配字段（文件夹内的站点也参与匹配） |
+| `features/folder.js` | 合并规则、面板、右键菜单、文件夹增删 |
+| `features/link-modal.js` `saveLink()` | 在文件夹内新增 / 修改站点 |
+| `features/bookmark-sync.js` 导入 / 导出 | 书签与 Item 的字段映射（组件无 url，写入时跳过；目录只对应一层文件夹） |
 
 新增设置字段时，同样检查 `normalizeData` 的 `settings` 合并与 `syncSettingsUI`。
+
+### 5.1 Item 字段消费点索引
+
+> 用途：改 Item 时**先查这张表定位，不要整库通读**。每行是「谁会因为这次改动出问题」。
+> 「新增 kind」列标 ★ 的是必须改的分派点，其余是字段读写点。
+
+| 位置（文件:函数） | 读写的字段 | 新增 kind 时要做什么 |
+| --- | --- | --- |
+| `store.js` `normalizeItem()` | 全部字段、`kind` 分支 | ★ 加分支，并决定非法数据怎么丢弃 |
+| `store.js` `normalizeSite()` | `id/title/url/icon` | 一般不用改 |
+| `store.js` `defaultData()` | 首次安装的默认条目 | 一般不用改 |
+| `core/data.js` `totalItems()` | 全部 `items`（文件夹额外算内部站点） | 决定计数口径 |
+| `core/data.js` `findItemEntry()` | `id`，会进文件夹一层 | ★ 新 kind 若是容器，要在这里展开 |
+| `core/data.js` `collectGroupUrls()` | `url`（含文件夹内） | ★ 容器类型要遍历内部 |
+| `features/rail.js` `renderSidebar()` | `g.items.length` | 只影响「N 个站点」数字 |
+| `features/grid.js` `renderGrid()` | `kind` 分派磁贴工厂 | ★ 加一路渲染 |
+| `features/grid.js` `visibleList()` | `title/url`（文件夹内站点也匹配） | ★ 容器要参与搜索展开 |
+| `features/grid.js` `paintIcon()` | `icon/url/title` | 一般不用改 |
+| `features/grid.js` `createTile()` | `url`→打开、`title` | 站点专用 |
+| `features/grid.js` `attachTileDrag()` / `dropZone()` | `kind/id`（合并判定） | ★ 决定新类型能否合并 / 拖拽 |
+| `features/folder.js` `canMergeItems()` | `kind` | ★ 组件在此被排除 |
+| `features/folder.js` `mergeItems()` / `folderSitesOf()` | `kind/items` | ★ 合并时怎么摊平 |
+| `features/folder.js` `createFolderTile()` / `fillFolderPreview()` | `title/items[].icon` | 文件夹专用 |
+| `features/folder.js` `buildFolderGrid()` / `openFolderItemMenu()` | `url/title` | 文件夹内只能是站点 |
+| `features/menu.js` 右键分派（`bindMenuEvents`） | `kind` | ★ 加一路菜单 |
+| `features/menu.js` `openItemMenu()` / `removeItem()` | `url`；删除走 `findItemEntry` | 一般不用改 |
+| `features/menu.js` `openGroupMenu()` 清空分组 | `g.items` | 容器会被整体丢弃 |
+| `features/link-modal.js` `saveLink()` | `title/url/icon`，`folderId` | ★ 容器内的增改入口 |
+| `features/backup.js` `exportData()` / `importData()` | 直接序列化 + `normalizeData` | 一般不用改 |
+| `features/backup.js` `buildBookmarksHtml()` | `title/url`，文件夹→一层子目录 | ★ 容器要映射成目录 |
+| `features/sync.js` `buildSyncPayload()` | 字段白名单 | ★ 漏字段会被同步丢弃 |
+| `features/sync.js` `mergeGroups()` | 字段重建规则 | ★ 同上 |
+| `features/bookmark-sync.js` `doSyncGroupsToBookmarks()` | `url`；`kind:'folder'`→子目录 | ★ 容器→目录 |
+| `features/bookmark-sync.js` `doSyncBookmarksToGroup()` | 生成文件夹（只一层） | ★ 目录→容器 |
+| `features/bookmark-sync.js` `bmCollectUrls()` | `url` | 只读，一般不用改 |
+| `widgets/picker.js` `addWidget()` | push 一个 `kind:'widget'` | 组件入口，一般不用改 |
 
 ---
 
@@ -282,13 +343,13 @@ Get-ChildItem -Recurse src\js -Filter *.js | ForEach-Object { node --check $_.Fu
 
 # 2) IDE 诊断（在编辑器里对 src 执行 read_lints）
 
-# 3) 无头 Chrome 冒烟：确认页面能渲染默认分组与磁贴
-& "C:\Program Files\Google\Chrome\Application\chrome.exe" --headless=new --disable-gpu --no-sandbox `
-  --virtual-time-budget=4000 --dump-dom "file:///D:/桌面快捷方式/code/浏览器插件/src/newtab.html"
-# 输出中应能搜到 rail-item 与 tile-name；若为空说明初始化链路报错。
+# 3) 冒烟测试（页面内用例，16 项，退出码非 0 即失败）
+node tools/smoke/run.js
 ```
 
-交互类改动（组件、弹窗、拖拽）建议临时复制 `newtab.html` 为 `src/__smoke.html`，在 `</body>` 前插入测试脚本，用 `--dump-dom` 读 `document.title` 传递结果，测完删除该临时文件。
+`tools/smoke/run.js` 会读 `src/newtab.html`，把 `tools/smoke/cases.js` 内联成 `src/__smoke.html`，用无头 Chrome/Edge 跑一遍并解析 `document.title`，最后删除临时文件（浏览器路径可用环境变量 `CHROME_PATH` 指定）。
+
+**新增用例**：只改 `tools/smoke/cases.js`，在对应分组里追加 `ok('名字', 断言, 失败细节)`；用例只能调用页面已有的全局函数。覆盖范围：文件夹合并 / 磁贴 / 面板 / 毛玻璃、备份往返、一层约束、同步字段白名单与合并、书签 HTML 层级、书签双向同步（内部伪造 `chrome.bookmarks`，不需要真扩展环境）。
 
 ---
 

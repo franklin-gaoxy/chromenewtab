@@ -7,11 +7,17 @@ function visibleList() {
     const g = currentGroup();
     return { list: g.items.map((item) => ({ item, groupId: g.id })), searching: false };
   }
+  const hit = (text) => text.toLowerCase().indexOf(q) >= 0;
   const list = [];
   state.groups.forEach((g) => {
     g.items.forEach((item) => {
-      const hay = (item.title + ' ' + (item.url || '')).toLowerCase();
-      if (hay.indexOf(q) >= 0) list.push({ item, groupId: g.id });
+      if (hit(item.title + ' ' + (item.url || ''))) list.push({ item, groupId: g.id });
+      // 文件夹内的站点同样参与搜索
+      if (item.kind === 'folder') {
+        item.items.forEach((child) => {
+          if (hit(child.title + ' ' + (child.url || ''))) list.push({ item: child, groupId: g.id });
+        });
+      }
     });
   });
   return { list, searching: true };
@@ -57,13 +63,13 @@ function paintIcon(container, item) {
   img.src = src;
 }
 
-/* 磁贴拖拽排序（网站磁贴与组件磁贴共用） */
+/* 磁贴拖拽排序 / 合并（网站磁贴、文件夹磁贴与组件磁贴共用） */
 function attachTileDrag(tile, item, groupId, searching) {
   if (searching) return;
   tile.draggable = true;
 
   tile.addEventListener('dragstart', (e) => {
-    dragState = { groupId, itemId: item.id };
+    dragState = { groupId, itemId: item.id, item };
     tile.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
     try { e.dataTransfer.setData('text/plain', item.id); } catch (err) { /* ignore */ }
@@ -71,28 +77,50 @@ function attachTileDrag(tile, item, groupId, searching) {
   tile.addEventListener('dragend', () => {
     dragState = null;
     tile.classList.remove('dragging');
-    document.querySelectorAll('.drop-before, .drop-after').forEach((n) => {
-      n.classList.remove('drop-before', 'drop-after');
+    document.querySelectorAll('.drop-before, .drop-after, .drop-merge').forEach((n) => {
+      n.classList.remove('drop-before', 'drop-after', 'drop-merge');
     });
   });
   tile.addEventListener('dragover', (e) => {
     if (!dragState) return;
     e.preventDefault();
-    const rect = tile.getBoundingClientRect();
-    const after = e.clientX > rect.left + rect.width / 2;
-    tile.classList.toggle('drop-after', after);
-    tile.classList.toggle('drop-before', !after);
+    const zone = dropZone(tile, e, item);
+    tile.classList.toggle('drop-merge', zone === 'merge');
+    tile.classList.toggle('drop-after', zone === 'after');
+    tile.classList.toggle('drop-before', zone === 'before');
   });
   tile.addEventListener('dragleave', () => {
-    tile.classList.remove('drop-before', 'drop-after');
+    tile.classList.remove('drop-before', 'drop-after', 'drop-merge');
   });
   tile.addEventListener('drop', (e) => {
     if (!dragState) return;
     e.preventDefault();
-    const after = tile.classList.contains('drop-after');
-    tile.classList.remove('drop-before', 'drop-after');
-    moveItem(dragState.groupId, dragState.itemId, groupId, item.id, after);
+    const zone = dropZone(tile, e, item);
+    tile.classList.remove('drop-before', 'drop-after', 'drop-merge');
+    if (zone === 'merge') {
+      mergeItems(dragState.groupId, dragState.itemId, groupId, item.id);
+      return;
+    }
+    moveItem(dragState.groupId, dragState.itemId, groupId, item.id, zone === 'after');
   });
+}
+
+/* 拖拽落点：左右边缘是插入，中间交给文件夹合并逻辑 */
+function dropZone(tile, e, target) {
+  const rect = tile.getBoundingClientRect();
+  const ratio = rect.width ? (e.clientX - rect.left) / rect.width : 0.5;
+  const mergeable =
+    dragState &&
+    dragState.item &&
+    typeof canMergeItems === 'function' &&
+    canMergeItems(dragState.item, target);
+
+  if (mergeable) {
+    if (ratio < 0.3) return 'before';
+    if (ratio > 0.7) return 'after';
+    return 'merge';
+  }
+  return ratio > 0.5 ? 'after' : 'before';
 }
 
 function createTile(item, groupId, searching, index) {
@@ -174,11 +202,13 @@ function renderGrid() {
   grid.innerHTML = '';
   if (typeof WidgetRegistry !== 'undefined') WidgetRegistry.cleanup();
   pageItems.forEach((entry, i) => {
-    const isWidget = entry.item.kind === 'widget';
+    const kind = entry.item.kind;
     grid.appendChild(
-      isWidget
+      kind === 'widget'
         ? createWidgetTile(entry.item, entry.groupId, searching, i)
-        : createTile(entry.item, entry.groupId, searching, i)
+        : kind === 'folder'
+          ? createFolderTile(entry.item, entry.groupId, searching, i)
+          : createTile(entry.item, entry.groupId, searching, i)
     );
   });
 
@@ -190,6 +220,7 @@ function renderGrid() {
 
   renderDots(pages);
   renderHint(list.length, searching);
+  refreshOpenFolder();
 }
 
 function renderDots(pages) {
@@ -253,8 +284,10 @@ function bindGridEvents() {
 
   document.addEventListener('dragend', () => {
     dragState = null;
-    document.querySelectorAll('.drop-before, .drop-after, .drop-target').forEach((n) => {
-      n.classList.remove('drop-before', 'drop-after', 'drop-target');
-    });
+    document
+      .querySelectorAll('.drop-before, .drop-after, .drop-merge, .drop-target')
+      .forEach((n) => {
+        n.classList.remove('drop-before', 'drop-after', 'drop-merge', 'drop-target');
+      });
   });
 }

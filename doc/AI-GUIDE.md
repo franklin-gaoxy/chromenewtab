@@ -24,7 +24,7 @@
 4. **验证**：
    - `node --check` 所有改动过的 JS；
    - 对改动文件跑 IDE 诊断（read_lints），零新增报错；
-   - 涉及渲染/交互时用无头 Chrome 做 DOM 冒烟（见 ARCHITECTURE 第 7 节）。
+   - `node tools/smoke/run.js` 跑页面冒烟；改动属于新能力时，在 `tools/smoke/cases.js` 追加对应用例（见 ARCHITECTURE 第 7 节）。
 5. **回写文档**：判断本次是否属于「结构性改动」。
 
 ## 文档维护规则（重要）
@@ -46,6 +46,7 @@
 - 不在 `grid.js` / `picker.js` 里为具体组件写 `if (type === 'clock')` 之类的分支；一切组件差异放在组件自己的 `mount/open` 里。
 - 新增脚本必须同时更新 `src/newtab.html` 的加载顺序；`registry.js` 必须早于所有组件文件，`main.js` 最后。
 - 修改数据结构必须同时处理 `store.js normalizeData()` 与 `features/sync.js` 的 `buildSyncPayload()` / `mergeGroups()`，否则同步会丢字段。
+- 文件夹只允许一层（`kind:'folder'` 的 `items` 里只能是网站）。合并、导入、同步都必须摊平，不允许出现嵌套文件夹。
 - 用户数据只能通过 `textContent` / `esc()` 进入 DOM，禁止直接拼进 `innerHTML`。
 - 不修改 `doc/PROTOCOL.md` 中的协议字段；服务端行为以其为准。
 - 不删除 `.codebuddy` 目录，不提交密钥；AI 的 API Key 只存在本机 storage。
@@ -57,7 +58,8 @@
 | 左侧分组栏（宽度、图标、重命名） | `src/js/features/rail.js`、`src/css/rail.css` |
 | 搜索框外观 / 引擎切换 | `src/css/stage.css`、`src/js/features/search.js`、`src/js/store.js`（ENGINES） |
 | 网格列数、对齐、每页数量 | `src/js/features/preferences.js`、`src/js/store.js`（DEFAULT_SETTINGS）、`src/newtab.html`、`src/js/features/settings-panel.js`、`src/css/grid.css` |
-| 磁贴样式 / 拖拽排序 | `src/css/grid.css`、`src/js/features/grid.js`（`attachTileDrag` / `moveItem`） |
+| 磁贴样式 / 拖拽排序 / 拖拽落点 | `src/css/grid.css`、`src/js/features/grid.js`（`attachTileDrag` / `dropZone` / `moveItem`） |
+| 文件夹（合并 / 面板 / 菜单） | `src/js/features/folder.js`、`src/css/folder.css`、`src/newtab.html`（`#folderMask`） |
 | 右键菜单项 | `src/js/features/menu.js`（`openCanvasMenu` / `openItemMenu` / `openGroupMenu`） |
 | 添加 / 修改组件 | `src/js/widgets/*`，见 ARCHITECTURE 4.1 |
 | 组件选择弹窗 | `src/js/widgets/picker.js`、`src/css/widgets.css` |
@@ -79,9 +81,10 @@
 
 - [ ] `node --check` 通过
 - [ ] 改动文件无新增 lint 报错
-- [ ] 页面能渲染（无头 Chrome dump-dom 中能搜到 `rail-item` / `tile-name`）
+- [ ] `node tools/smoke/run.js` 全部通过（新能力已补用例）
 - [ ] 若改了数据模型：旧数据仍能加载（`normalizeData` 兜底）
 - [ ] 若改了组件：添加弹窗能看到、能添加、能拖拽、能删除
+- [ ] 若改了文件夹：拖到磁贴中间能合并、拖到文件夹上能放入、面板能开能关、备份 JSON 里结构与导出一致
 - [ ] 若改了 AI：弹窗能开、会话能切换、设置页三个分类都能渲染
 - [ ] 若改了书签：悬浮按钮能开面板、树能展开、搜索有结果、同步面板两个 tab 均能渲染
 - [ ] 若属结构性改动：`doc/ARCHITECTURE.md` 已同步

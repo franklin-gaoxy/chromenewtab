@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="css/widgets.css" />
 <link rel="stylesheet" href="css/ai.css" />
 <link rel="stylesheet" href="css/bookmarks.css" />
+<link rel="stylesheet" href="css/folder.css" />
 <link rel="stylesheet" href="css/responsive.css" />
 </head>
 <body data-bg="forest">
@@ -73,6 +74,11 @@
 <!-- 站点操作菜单 -->
 <div class="menu" id="itemMenu" hidden></div>
 
+<!-- 文件夹面板（毛玻璃，只支持一层） -->
+<div class="folder-mask" id="folderMask" hidden>
+  <div class="folder-panel" id="folderPanel" role="dialog" aria-modal="true" aria-label="文件夹"></div>
+</div>
+
 <!-- 链接编辑弹窗 -->
 <div class="mask" id="linkMask" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="linkModalTitle">
@@ -112,7 +118,7 @@
         </div>
       </div>
 
-      <label class="field">
+      <label class="field" id="fGroupField">
         <span class="field-label">所属分组</span>
         <select id="fGroup"></select>
       </label>
@@ -270,6 +276,7 @@
 <script src="js/features/rail.js"></script>
 <script src="js/features/search.js"></script>
 <script src="js/features/grid.js"></script>
+<script src="js/features/folder.js"></script>
 <script src="js/features/menu.js"></script>
 <script src="js/features/modal.js"></script>
 <script src="js/features/link-modal.js"></script>

@@ -39,9 +39,8 @@ function showMenu(event, items) {
 }
 
 function findItem(groupId, itemId) {
-  const g = groupById(groupId);
-  if (!g) return null;
-  return g.items.find((it) => it.id === itemId) || null;
+  const entry = findItemEntry(groupId, itemId);
+  return entry ? entry.item : null;
 }
 
 /* 空白处右键：全局操作入口 */
@@ -102,11 +101,9 @@ function removeGroup(id) {
 }
 
 function removeItem(groupId, itemId) {
-  const g = groupById(groupId);
-  if (!g) return;
-  const idx = g.items.findIndex((it) => it.id === itemId);
-  if (idx < 0) return;
-  g.items.splice(idx, 1);
+  const entry = findItemEntry(groupId, itemId);
+  if (!entry) return;
+  entry.list.splice(entry.index, 1);
   save();
   renderAll();
   toast('已删除');
@@ -120,12 +117,14 @@ function bindMenuEvents() {
     if (node.closest('input, textarea, select, [contenteditable="true"]')) return;
     if (node.closest('.ai-shell, #aiMask, #widgetMask')) return; // 组件内部保留原生菜单
     e.preventDefault();
+    if (node.closest('#folderMask')) return; // 文件夹面板内部自己处理右键
 
     const tile = node.closest('.tile');
     if (tile && !tile.classList.contains('add')) {
       const item = findItem(tile.dataset.group, tile.dataset.id);
       if (item) {
         if (item.kind === 'widget') openWidgetMenu(e, tile.dataset.group, item);
+        else if (item.kind === 'folder') openFolderMenu(e, tile.dataset.group, item);
         else openItemMenu(e, tile.dataset.group, item);
         return;
       }

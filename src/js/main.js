@@ -7,6 +7,7 @@ function bindEvents() {
   bindRailEvents();
   bindSearchEvents();
   bindGridEvents();
+  bindFolderEvents();
   bindMenuEvents();
   bindModalEvents();
   bindLinkEvents();
@@ -88,12 +89,13 @@ function bindGlobalShortcuts() {
     const key = (e.key || '').toLowerCase();
 
     if (key === 'escape') {
+      if (!$('itemMenu').hidden) return hideMenu();
+      if ($('folderMask') && !$('folderMask').hidden) return closeFolder();
       if (!$('linkMask').hidden) return closeModal('linkMask');
       if (!$('settingsMask').hidden) return closeModal('settingsMask');
       if ($('widgetMask') && !$('widgetMask').hidden) return closeModal('widgetMask');
       if ($('aiMask') && !$('aiMask').hidden) return closeModal('aiMask');
       if ($('bmPanel') && !$('bmPanel').hidden) return closeBookmarkPanel();
-      if (!$('itemMenu').hidden) return hideMenu();
       if ($('searchInput').value) {
         $('searchInput').value = '';
         ui.query = '';

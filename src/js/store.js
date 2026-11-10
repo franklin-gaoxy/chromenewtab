@@ -227,6 +227,54 @@ function defaultData() {
   };
 }
 
+/* 网站条目归一化 */
+function normalizeSite(it) {
+  return {
+    id: it.id || uid('i'),
+    title: String(it.title || suggestTitle(it.url)).slice(0, 40),
+    url: normalizeUrl(it.url),
+    icon: typeof it.icon === 'string' ? it.icon : ''
+  };
+}
+
+/* 单个条目归一化：网站 / 组件 / 文件夹（文件夹只允许一层，内部只能是网站） */
+function normalizeItem(it) {
+  if (!it || typeof it !== 'object') return null;
+
+  // 组件条目：没有 url，靠 widget 字段区分
+  if (it.kind === 'widget') {
+    if (!it.widget) return null;
+    return {
+      id: it.id || uid('i'),
+      kind: 'widget',
+      widget: String(it.widget),
+      title: String(it.title || it.widget).slice(0, 40),
+      config: it.config && typeof it.config === 'object' ? it.config : {}
+    };
+  }
+
+  if (it.kind === 'folder') {
+    const inner = (Array.isArray(it.items) ? it.items : [])
+      .filter(
+        (sub) =>
+          sub &&
+          typeof sub === 'object' &&
+          sub.kind !== 'widget' &&
+          sub.kind !== 'folder' && // 只保留一层：丢弃嵌套文件夹
+          normalizeUrl(sub.url)
+      )
+      .map(normalizeSite);
+    return {
+      id: it.id || uid('f'),
+      kind: 'folder',
+      title: String(it.title || '文件夹').slice(0, 20),
+      items: inner
+    };
+  }
+
+  return normalizeUrl(it.url) ? normalizeSite(it) : null;
+}
+
 function normalizeData(raw) {
   const data = raw && typeof raw === 'object' ? raw : {};
   const out = {
@@ -237,26 +285,7 @@ function normalizeData(raw) {
 
   (Array.isArray(data.groups) ? data.groups : []).forEach((g) => {
     if (!g || typeof g !== 'object' || !g.name) return;
-    const items = (Array.isArray(g.items) ? g.items : [])
-      .filter((it) => it && (it.kind === 'widget' ? !!it.widget : normalizeUrl(it.url)))
-      .map((it) => {
-        // 组件条目：没有 url，靠 widget 字段区分
-        if (it.kind === 'widget') {
-          return {
-            id: it.id || uid('i'),
-            kind: 'widget',
-            widget: String(it.widget),
-            title: String(it.title || it.widget).slice(0, 40),
-            config: it.config && typeof it.config === 'object' ? it.config : {}
-          };
-        }
-        return {
-          id: it.id || uid('i'),
-          title: String(it.title || suggestTitle(it.url)).slice(0, 40),
-          url: normalizeUrl(it.url),
-          icon: typeof it.icon === 'string' ? it.icon : ''
-        };
-      });
+    const items = (Array.isArray(g.items) ? g.items : []).map(normalizeItem).filter(Boolean);
     out.groups.push({
       id: g.id || uid('g'),
       name: String(g.name).slice(0, 20),

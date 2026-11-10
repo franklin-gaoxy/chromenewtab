@@ -44,22 +44,37 @@ function buildBookmarksHtml(rootName) {
   let folders = 0;
   let links = 0;
 
-  state.groups.forEach((g) => {
-    const items = g.items.filter((it) => normalizeUrl(it.url));
-    if (!items.length) return;
-    folders += 1;
+  const pushFolder = (indent, name) => {
     lines.push(
-      '        <DT><H3 ADD_DATE="' + now + '" LAST_MODIFIED="' + now + '">' +
-        escapeBookmark(g.name) + '</H3>'
+      indent + '<DT><H3 ADD_DATE="' + now + '" LAST_MODIFIED="' + now + '">' +
+        escapeBookmark(name) + '</H3>'
     );
-    lines.push('        <DL><p>');
-    items.forEach((it) => {
-      const url = normalizeUrl(it.url);
-      lines.push(
-        '            <DT><A HREF="' + escapeBookmark(url) + '" ADD_DATE="' + now + '">' +
-          escapeBookmark(it.title || hostOf(url) || url) + '</A>'
-      );
-      links += 1;
+    lines.push(indent + '<DL><p>');
+    folders += 1;
+  };
+
+  const pushLink = (indent, site) => {
+    const url = normalizeUrl(site.url);
+    if (!url) return;
+    lines.push(
+      indent + '<DT><A HREF="' + escapeBookmark(url) + '" ADD_DATE="' + now + '">' +
+        escapeBookmark(site.title || hostOf(url) || url) + '</A>'
+    );
+    links += 1;
+  };
+
+  state.groups.forEach((g) => {
+    const sites = g.items.filter((it) => it.kind !== 'folder' && normalizeUrl(it.url));
+    const subFolders = g.items.filter((it) => it.kind === 'folder' && it.items.length);
+    if (!sites.length && !subFolders.length) return;
+
+    // 分组 → 一层文件夹；分组里的文件夹 → 再一层（与书签同步的层级一致）
+    pushFolder('        ', g.name);
+    sites.forEach((it) => pushLink('            ', it));
+    subFolders.forEach((folder) => {
+      pushFolder('            ', folder.title);
+      folder.items.forEach((it) => pushLink('                ', it));
+      lines.push('            </DL><p>');
     });
     lines.push('        </DL><p>');
   });

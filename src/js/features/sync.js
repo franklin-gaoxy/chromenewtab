@@ -79,22 +79,36 @@ function buildSyncPayload() {
     groups: state.groups.map((g) => ({
       id: g.id,
       name: g.name,
-      items: g.items.map((it) =>
-        it.kind === 'widget'
-          ? {
-              id: it.id,
-              kind: 'widget',
-              widget: it.widget,
-              title: it.title,
-              config: it.config || {}
-            }
-          : {
-              id: it.id,
-              title: it.title,
-              url: it.url,
-              icon: it.icon || ''
-            }
-      )
+      items: g.items.map((it) => {
+        if (it.kind === 'widget') {
+          return {
+            id: it.id,
+            kind: 'widget',
+            widget: it.widget,
+            title: it.title,
+            config: it.config || {}
+          };
+        }
+        if (it.kind === 'folder') {
+          return {
+            id: it.id,
+            kind: 'folder',
+            title: it.title,
+            items: it.items.map((site) => ({
+              id: site.id,
+              title: site.title,
+              url: site.url,
+              icon: site.icon || ''
+            }))
+          };
+        }
+        return {
+          id: it.id,
+          title: it.title,
+          url: it.url,
+          icon: it.icon || ''
+        };
+      })
     })),
     activeGroupId: state.activeGroupId
   };
@@ -151,6 +165,25 @@ function mergeGroups(localGroups, remoteGroups) {
             widget: it.widget,
             title: String(it.title || it.widget).slice(0, 40),
             config: it.config && typeof it.config === 'object' ? it.config : {}
+          });
+          return;
+        }
+
+        if (it.kind === 'folder') {
+          const inner = (Array.isArray(it.items) ? it.items : [])
+            .filter((site) => site && site.url)
+            .map((site) => ({
+              id: site.id || uid('i'),
+              title: String(site.title || suggestTitle(site.url)).slice(0, 40),
+              url: site.url,
+              icon: site.icon || ''
+            }));
+          if (!inner.length) return;
+          target.items.push({
+            id: it.id || uid('f'),
+            kind: 'folder',
+            title: String(it.title || '文件夹').slice(0, 20),
+            items: inner
           });
           return;
         }

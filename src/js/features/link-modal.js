@@ -34,6 +34,7 @@ function updateIconPreview() {
 function openLinkModal(opts) {
   const options = opts || {};
   const item = options.item || null;
+  const folderId = options.folderId || null;
   const groupId = item ? options.groupId : options.groupId || currentGroup().id;
 
   const sel = $('fGroup');
@@ -42,7 +43,11 @@ function openLinkModal(opts) {
     .join('');
   if (state.groups.some((g) => g.id === groupId)) sel.value = groupId;
 
-  editing = { groupId, itemId: item ? item.id : null };
+  // 往文件夹里新增时，分组由文件夹决定，隐藏分组选择
+  const groupField = $('fGroupField');
+  if (groupField) groupField.hidden = !!folderId && !item;
+
+  editing = { groupId, itemId: item ? item.id : null, folderId };
   $('linkModalTitle').textContent = item ? '编辑网站' : '添加网站';
   $('fTitle').value = item ? item.title : '';
   $('fUrl').value = item ? item.url : '';
@@ -70,28 +75,34 @@ function saveLink() {
   let icon = $('fIcon').value.trim();
   if (icon && icon === faviconUrl(abs, 64)) icon = '';
 
+  const folder =
+    editing && editing.folderId ? findFolder(editing.groupId, editing.folderId) : null;
+  let destination = targetGroup.name;
+
   if (editing && editing.itemId) {
-    const from = groupById(editing.groupId) || targetGroup;
-    const idx = from.items.findIndex((it) => it.id === editing.itemId);
-    if (idx >= 0) {
-      const item = from.items[idx];
-      item.title = title;
-      item.url = abs;
-      item.icon = icon;
-      if (from.id !== targetGroup.id) {
-        from.items.splice(idx, 1);
-        targetGroup.items.push(item);
+    // 支持修改文件夹内的站点；换分组时从文件夹里取出
+    const entry = findItemEntry(editing.groupId, editing.itemId);
+    if (entry) {
+      entry.item.title = title;
+      entry.item.url = abs;
+      entry.item.icon = icon;
+      if (entry.group.id !== targetGroup.id) {
+        entry.list.splice(entry.index, 1);
+        targetGroup.items.push(entry.item);
       }
     }
+  } else if (folder) {
+    folder.items.push({ id: uid('i'), title, url: abs, icon });
+    destination = folder.title;
   } else {
     targetGroup.items.push({ id: uid('i'), title, url: abs, icon });
+    ui.page = Math.floor(Math.max(0, targetGroup.items.length - 1) / perPage());
   }
 
   closeModal('linkMask');
   save();
-  ui.page = Math.floor(Math.max(0, targetGroup.items.length - 1) / perPage());
   renderAll();
-  toast(editing && editing.itemId ? '已更新' : '已添加到「' + targetGroup.name + '」');
+  toast(editing && editing.itemId ? '已更新' : '已添加到「' + destination + '」');
   editing = null;
 }
 
