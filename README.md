@@ -84,9 +84,12 @@
 
 ## 二、安装（从仓库包，三步）
 
-仓库里已经放了打好的发布包：[`dist/qihang-nav-1.0.0.zip`](dist/qihang-nav-1.0.0.zip)，直接下载即可（GitHub 上点该文件 → 右侧「Download raw file」）。
+发布包有两个下载位置（内容相同，任选其一）：
 
-1. **下载** `dist/qihang-nav-1.0.0.zip`
+- **Release 资产（推荐，一键下载）**：[Releases · v1.0.0](https://github.com/franklin-gaoxy/chromenewtab/releases/latest) → 点 `qihang-nav-1.0.0.zip`
+- **仓库内文件**：[`dist/qihang-nav-1.0.0.zip`](dist/qihang-nav-1.0.0.zip)（GitHub 上点该文件 → 右侧「Download raw file」）
+
+1. **下载** `qihang-nav-1.0.0.zip`
 2. **解压**到任意**固定位置**，例如 `D:\Extensions\qihang-nav`
    - 解压后的根目录里应能直接看到 `manifest.json` 和 `src/` 文件夹
    - 请保留该文件夹，浏览器加载的是解压后的目录，而不是 zip 本身
