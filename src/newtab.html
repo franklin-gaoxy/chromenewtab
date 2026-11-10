@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>新标签页</title>
+<link rel="stylesheet" href="css/base.css" />
+<link rel="stylesheet" href="css/background.css" />
+<link rel="stylesheet" href="css/rail.css" />
+<link rel="stylesheet" href="css/stage.css" />
+<link rel="stylesheet" href="css/grid.css" />
+<link rel="stylesheet" href="css/menu.css" />
+<link rel="stylesheet" href="css/modal.css" />
+<link rel="stylesheet" href="css/toast.css" />
+<link rel="stylesheet" href="css/drawer.css" />
+<link rel="stylesheet" href="css/widgets.css" />
+<link rel="stylesheet" href="css/ai.css" />
+<link rel="stylesheet" href="css/bookmarks.css" />
+<link rel="stylesheet" href="css/responsive.css" />
+</head>
+<body data-bg="forest">
+
+<!-- 背景 -->
+<div class="bg">
+  <div class="bg-image" id="bgImage"></div>
+  <div class="bg-veil"></div>
+</div>
+
+<!-- 左侧常驻分组栏 -->
+<aside class="rail" aria-label="分组">
+  <span class="rail-bg" aria-hidden="true"></span>
+
+  <nav class="rail-groups" id="groupList"></nav>
+
+  <button class="rail-add" id="addGroup" title="新建分组">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>
+  </button>
+</aside>
+
+<!-- 主区域 -->
+<main class="stage">
+  <nav class="engines" id="engines" aria-label="搜索分类"></nav>
+
+  <form class="search" id="searchForm" autocomplete="off">
+    <button type="button" class="engine-pick" id="enginePick" title="切换搜索引擎">
+      <span class="engine-badge" id="engineBadge">B</span>
+      <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <input id="searchInput" type="text" placeholder="输入并搜索，或筛选站点" spellcheck="false" autocomplete="off" />
+    <button type="button" class="clear-btn" id="clearBtn" hidden title="清空">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+    </button>
+    <button type="submit" class="search-go" title="搜索">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm5.5-1.5L21 21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+  </form>
+
+  <p class="filter-hint" id="filterHint" hidden></p>
+
+  <section class="grid" id="grid" aria-label="站点"></section>
+
+  <div class="empty" id="empty" hidden>
+    <p class="empty-title">这个分组还是空的</p>
+    <p class="empty-sub">点击下面的按钮，把常用网站加进来</p>
+    <button class="primary-btn" id="emptyAdd">添加网站</button>
+  </div>
+
+  <div class="dots" id="dots"></div>
+</main>
+
+<!-- 站点操作菜单 -->
+<div class="menu" id="itemMenu" hidden></div>
+
+<!-- 链接编辑弹窗 -->
+<div class="mask" id="linkMask" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="linkModalTitle">
+    <header class="modal-head">
+      <h2 id="linkModalTitle">添加网站</h2>
+      <button class="icon-btn" data-close="linkMask" title="关闭">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+
+    <div class="modal-body">
+      <label class="field">
+        <span class="field-label">名称</span>
+        <input id="fTitle" type="text" placeholder="例如：掘金" maxlength="24" />
+      </label>
+
+      <label class="field">
+        <span class="field-label">网址</span>
+        <input id="fUrl" type="text" placeholder="例如：juejin.cn 或 https://juejin.cn" spellcheck="false" />
+      </label>
+
+      <div class="field">
+        <span class="field-label">图标</span>
+        <div class="icon-row">
+          <div class="icon-preview" id="iconPreview">
+            <img id="iconPreviewImg" alt="" hidden />
+            <span id="iconPreviewText">?</span>
+          </div>
+          <div class="icon-tools">
+            <div class="icon-tools-line">
+              <button type="button" class="mini-btn primary" id="iconAuto">自动获取</button>
+              <button type="button" class="mini-btn" id="iconUploadBtn">上传图片</button>
+              <input id="iconUpload" type="file" accept="image/*" hidden />
+            </div>
+            <input id="fIcon" type="text" placeholder="或粘贴图标地址（留空自动获取）" spellcheck="false" />
+          </div>
+        </div>
+      </div>
+
+      <label class="field">
+        <span class="field-label">所属分组</span>
+        <select id="fGroup"></select>
+      </label>
+    </div>
+
+    <footer class="modal-foot">
+      <button class="ghost-btn danger" id="fDelete" hidden>删除</button>
+      <div class="spacer"></div>
+      <button class="ghost-btn" data-close="linkMask">取消</button>
+      <button class="primary-btn" id="fSave">保存</button>
+    </footer>
+  </div>
+</div>
+
+<!-- 设置抽屉（右侧滑出） -->
+<div class="drawer-mask" id="settingsMask" hidden>
+  <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <header class="drawer-head">
+      <h2 id="settingsTitle">设置</h2>
+      <button class="icon-btn" data-close="settingsMask" title="关闭">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+
+    <div class="drawer-body">
+      <section class="setting-block" data-section="engine">
+        <h3>搜索引擎</h3>
+        <div class="chips" id="engineChips"></div>
+      </section>
+
+      <section class="setting-block" data-section="bg">
+        <h3>背景</h3>
+        <div class="chips bg-chips" id="bgChips"></div>
+        <div class="inline-row">
+          <input id="bgUrl" type="text" placeholder="粘贴图片链接，例如 https://.../wallpaper.jpg" spellcheck="false" />
+          <button class="mini-btn" id="bgApplyUrl">应用</button>
+          <button class="mini-btn" id="bgUploadBtn">本地图片</button>
+          <input id="bgUpload" type="file" accept="image/*" hidden />
+        </div>
+      </section>
+
+      <section class="setting-block" data-section="behavior">
+        <h3>行为</h3>
+        <label class="switch-row">
+          <span>在新标签页中打开链接</span>
+          <input type="checkbox" id="optNewTab" />
+          <i class="switch"></i>
+        </label>
+        <label class="switch-row">
+          <span>图标下方显示名称</span>
+          <input type="checkbox" id="optLabels" />
+          <i class="switch"></i>
+        </label>
+
+      </section>
+
+      <section class="setting-block" data-section="layout">
+        <h3>布局</h3>
+
+        <p class="sub-label">每行图标数量</p>
+        <div class="inline-row">
+          <input id="optPerRow" type="number" min="3" max="8" step="1" value="5" />
+        </div>
+
+        <p class="sub-label">网格对齐</p>
+        <div class="chips" id="alignChips"></div>
+
+        <p class="sub-label">书签按钮位置</p>
+        <div class="chips" id="bmPosChips"></div>
+
+        <p class="tip">每行数量可在 3 ~ 8 之间调整，同时决定每页的图标总数（每页固定 3 行）。书签按钮位置指屏幕右侧悬浮按钮在高度上的位置（整屏三等份）。</p>
+      </section>
+
+      <section class="setting-block" data-section="sync">
+        <h3>远程同步</h3>
+
+        <div id="syncGuest">
+          <div class="inline-row">
+            <input id="syncServer" type="text" placeholder="服务器地址，例如 http://localhost:8787" spellcheck="false" />
+          </div>
+          <div class="inline-row">
+            <input id="syncUserInput" type="text" placeholder="用户名" spellcheck="false" autocomplete="off" />
+            <input id="syncPassInput" type="password" placeholder="密码" autocomplete="off" />
+          </div>
+          <div class="inline-row">
+            <button class="mini-btn primary" id="syncLogin">登录</button>
+            <button class="mini-btn" id="syncRegister">注册</button>
+          </div>
+          <p class="tip">使用 QSP v1 协议，接口说明见 <a href="#" class="doc-link" id="protocolDocLink">《QSP 协议文档》</a>；仓库内 server/ 提供了示例服务端。</p>
+        </div>
+
+        <div id="syncUserBox" hidden>
+          <p class="sync-line">已登录：<strong id="syncAccount">-</strong></p>
+          <p class="sync-line dim" id="syncServerLabel">-</p>
+          <div class="inline-row">
+            <button class="mini-btn primary" id="syncUpload">上传到服务器</button>
+            <button class="mini-btn" id="syncDownload">从服务器恢复</button>
+            <button class="mini-btn" id="syncMerge">智能合并</button>
+          </div>
+          <div class="inline-row">
+            <button class="mini-btn danger" id="syncLogout">退出登录</button>
+          </div>
+          <p class="tip" id="syncStatus">尚未同步</p>
+        </div>
+      </section>
+
+      <section class="setting-block" data-section="data">
+        <h3>备份与恢复</h3>
+
+        <p class="sub-label">插件备份（JSON）</p>
+        <div class="inline-row">
+          <button class="mini-btn" id="dataExport">导出备份</button>
+          <button class="mini-btn" id="dataImportBtn">导入备份</button>
+          <input id="dataImport" type="file" accept="application/json,.json" hidden />
+        </div>
+        <p class="tip">包含全部分组、站点与偏好设置；在另一台机器的同一扩展中「导入备份」即可完整恢复。</p>
+
+        <p class="sub-label">浏览器书签（HTML）</p>
+        <div class="inline-row">
+          <button class="mini-btn" id="dataExportBookmarks">导出浏览器书签</button>
+        </div>
+        <p class="tip">
+          生成标准 Netscape 书签文件，所有站点收纳在「启航导航」文件夹内。在 Chrome 书签管理器右上角 ⋮ → 导入书签，选择该文件即可，书签栏只会多出一个目录。
+        </p>
+
+        <p class="sub-label">危险操作</p>
+        <div class="inline-row">
+          <button class="mini-btn danger" id="dataReset">恢复默认</button>
+        </div>
+        <p class="tip">导航数据保存在本机浏览器中；开启远程同步后才会发送到你自己的服务器。</p>
+      </section>
+    </div>
+
+    <footer class="drawer-foot">
+      <span class="version">启航 · v1.0.0</span>
+      <div class="spacer"></div>
+      <button class="primary-btn" data-close="settingsMask">完成</button>
+    </footer>
+  </aside>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="js/store.js"></script>
+
+<!-- 核心：状态、工具、图标、数据 -->
+<script src="js/core/icons.js"></script>
+<script src="js/core/utils.js"></script>
+<script src="js/core/state.js"></script>
+<script src="js/core/data.js"></script>
+<script src="js/core/media.js"></script>
+
+<!-- 功能模块 -->
+<script src="js/features/preferences.js"></script>
+<script src="js/features/rail.js"></script>
+<script src="js/features/search.js"></script>
+<script src="js/features/grid.js"></script>
+<script src="js/features/menu.js"></script>
+<script src="js/features/modal.js"></script>
+<script src="js/features/link-modal.js"></script>
+<script src="js/features/settings-panel.js"></script>
+<script src="js/features/backup.js"></script>
+<script src="js/features/sync.js"></script>
+<script src="js/features/bookmarks.js"></script>
+<script src="js/features/bookmark-sync.js"></script>
+
+<!-- 组件系统：注册表 + 各组件的实现 -->
+<script src="js/widgets/registry.js"></script>
+<script src="js/widgets/picker.js"></script>
+<script src="js/widgets/clock.js"></script>
+<script src="js/widgets/ai/store.js"></script>
+<script src="js/widgets/ai/api.js"></script>
+<script src="js/widgets/ai/settings.js"></script>
+<script src="js/widgets/ai/chat.js"></script>
+<script src="js/widgets/ai/index.js"></script>
+
+<!-- 入口 -->
+<script src="js/main.js"></script>
+</body>
+</html>

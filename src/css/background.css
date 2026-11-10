@@ -1,0 +1,39 @@
+/* ============ 背景图层 ============ */
+
+/* ============ 背景 ============ */
+.bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: #22302b;
+}
+
+.bg-image {
+  position: absolute;
+  inset: -2%;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  transition: background-image 0.4s var(--ease), filter 0.4s var(--ease);
+  animation: bgIn 1.2s var(--ease) both;
+}
+
+@keyframes bgIn {
+  from { opacity: 0; transform: scale(1.04); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.bg-veil {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(115% 75% at 50% 16%, rgba(10, 17, 15, 0.34), rgba(10, 17, 15, 0) 62%),
+    linear-gradient(180deg, rgba(8, 14, 12, 0.4) 0%, rgba(8, 14, 12, 0.14) 38%, rgba(5, 10, 9, 0.55) 100%);
+}
+
+/* 背景图由 js 按预设注入到 .bg-image 的 style 上，这里只保留底色兜底 */
+body[data-bg="midnight"] { background: #071019; }
+body[data-bg="dusk"] { background: #1b1116; }
+body[data-bg="celadon"] { background: #16241f; }
+

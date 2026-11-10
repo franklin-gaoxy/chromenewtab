@@ -1,0 +1,148 @@
+/* ============ 主舞台与搜索框 ============ */
+
+/* ============ 主舞台 ============ */
+.stage {
+  position: relative;
+  z-index: 1;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 96px 28px 60px 100px;
+}
+
+/* 搜索分类 */
+.engines {
+  display: flex;
+  gap: 26px;
+  margin-bottom: 16px;
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.engine-tab {
+  position: relative;
+  padding: 4px 2px;
+  color: inherit;
+  transition: color 0.16s;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 2px 12px rgba(0, 0, 0, 0.45);
+}
+
+.engine-tab:hover { color: #fff; }
+.engine-tab.active { color: #fff; font-weight: 600; }
+.engine-tab.active::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0.9;
+}
+
+/* 搜索框 */
+.search {
+  position: relative;
+  width: 100%;
+  max-width: 620px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(28, 36, 44, 0.55);
+  backdrop-filter: blur(18px) saturate(125%);
+  box-shadow:
+    0 20px 44px -26px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.search:focus-within {
+  background: rgba(30, 39, 48, 0.68);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 0 0 3px rgba(120, 190, 255, 0.14),
+    0 20px 44px -26px rgba(0, 0, 0, 0.85);
+}
+
+.engine-pick {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 5px 3px 3px;
+  margin-left: -4px;
+  border-radius: 9px;
+  color: rgba(255, 255, 255, 0.55);
+  transition: background 0.16s, color 0.16s;
+}
+
+.engine-pick:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.engine-badge {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: linear-gradient(140deg, #6fc6ff, #2b7cf6 62%, #1a5fd0);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.engine-pick .chev { width: 13px; height: 13px; opacity: 0.75; }
+
+#searchInput {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 14.5px;
+  color: #eaf1f7;
+}
+
+#searchInput::placeholder { color: rgba(190, 205, 218, 0.62); }
+
+.clear-btn,
+.search-go {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 9px;
+  border: 0;
+  background: none;
+  color: rgba(255, 255, 255, 0.55);
+  transition: background 0.16s, color 0.16s;
+}
+
+.clear-btn svg, .search-go svg { width: 17px; height: 17px; }
+.clear-btn:hover,
+.search-go:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+
+/* 筛选提示 */
+.filter-hint {
+  margin: 18px 0 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+

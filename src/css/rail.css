@@ -1,0 +1,156 @@
+/* ============ 左侧常驻分组栏 ============ */
+
+/* ============ 左侧常驻图标栏 ============ */
+.rail {
+  position: fixed;
+  top: 50%;
+  left: 18px;
+  transform: translateY(-50%);
+  z-index: 55;
+  width: 204px;
+  height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 8px 0;
+  pointer-events: none;
+}
+
+.rail-bg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 52px;
+  border-radius: 26px;
+  background: rgba(28, 33, 28, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  backdrop-filter: blur(24px) saturate(125%);
+  box-shadow: 0 26px 60px -32px rgba(0, 0, 0, 0.9);
+  pointer-events: auto;
+  z-index: 0;
+}
+
+.rail-groups,
+.rail-add {
+  position: relative;
+  z-index: 1;
+}
+
+.rail-groups {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 2px 0;
+  margin-left: 9px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  pointer-events: auto;
+}
+
+.rail-groups::-webkit-scrollbar { width: 0; height: 0; }
+
+.rail-item {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.9);
+  user-select: none;
+  text-align: left;
+}
+
+.rail-icon {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  transition: background 0.18s, color 0.18s;
+}
+
+.rail-icon svg { width: 17px; height: 17px; }
+
+.rail-item:hover { color: #fff; }
+.rail-item:hover .rail-icon { background: rgba(255, 255, 255, 0.14); }
+.rail-item.active { color: #fff; }
+.rail-item.active .rail-icon { background: rgba(255, 255, 255, 0.26); }
+.rail-item.drop-target .rail-icon {
+  background: rgba(111, 224, 178, 0.3);
+  box-shadow: inset 0 0 0 1px rgba(111, 224, 178, 0.65);
+}
+
+.rail-label {
+  max-width: 132px;
+  font-size: 14.5px;
+  line-height: 1.35;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6), 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+.rail-input {
+  width: 136px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(111, 224, 178, 0.7);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 12.5px;
+  outline: none;
+}
+
+.rail-add {
+  flex: none;
+  margin-left: 8px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1.4px solid rgba(255, 255, 255, 0.42);
+  background: none;
+  color: rgba(255, 255, 255, 0.86);
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
+  pointer-events: auto;
+}
+
+.rail-add svg { width: 15px; height: 15px; }
+.rail-add:hover { background: rgba(255, 255, 255, 0.16); border-color: #fff; color: #fff; }
+
+/* 通用次要按钮（弹窗/抽屉内） */
+.ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line-soft);
+  transition: background 0.16s, color 0.16s;
+}
+
+.ghost-btn svg { width: 15px; height: 15px; }
+.ghost-btn:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.ghost-btn.danger { color: var(--danger); }
+.ghost-btn.danger:hover { background: rgba(255, 122, 122, 0.16); color: #ffb4b4; }
+

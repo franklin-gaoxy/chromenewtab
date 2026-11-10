@@ -1,0 +1,181 @@
+/* ============ 图标网格与磁贴 ============ */
+
+/* ============ 图标网格 ============ */
+.grid {
+  width: 100%;
+  /* 列数由设置项控制：--cols，默认 5 列 */
+  max-width: min(100%, calc(var(--cols, 5) * 112px - 8px));
+  margin-top: 34px;
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr));
+  gap: 8px;
+  justify-content: center;
+  align-content: start;
+  align-self: var(--grid-align, center);
+}
+
+.tile {
+  position: relative;
+  width: 100%;
+  padding: 10px 2px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: background 0.18s var(--ease), transform 0.18s var(--ease);
+  animation: tileIn 0.34s var(--ease) both;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: element;
+}
+
+@keyframes tileIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tile:hover { background: rgba(255, 255, 255, 0.1); transform: translateY(-3px); }
+.tile:active { transform: translateY(-1px) scale(0.98); }
+.tile.dragging {
+  opacity: 0.35;
+  transform: none;
+  background: none;
+}
+.tile.drop-before::before,
+.tile.drop-after::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(111, 224, 178, 0.8);
+}
+.tile.drop-before::before { left: -3px; }
+.tile.drop-after::before { right: -3px; }
+
+.tile-icon {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 12px 24px -14px rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.tile:hover .tile-icon {
+  box-shadow: 0 16px 30px -12px rgba(0, 0, 0, 0.9);
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
+.tile-icon img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.tile-icon.cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tile-icon .letter {
+  font-size: 24px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  letter-spacing: 0.5px;
+}
+
+.tile-name {
+  max-width: 98px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6), 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+body.no-labels .tile-name { display: none; }
+
+.tile-more {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(10, 16, 14, 0.55);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.tile-more svg { width: 14px; height: 14px; }
+.tile:hover .tile-more { opacity: 1; }
+.tile-more:hover { background: rgba(10, 16, 14, 0.85); }
+
+/* 添加磁贴 */
+.tile.add .tile-icon {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px dashed rgba(255, 255, 255, 0.34);
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.tile.add:hover .tile-icon {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.tile.add .tile-icon svg { width: 24px; height: 24px; }
+.tile.add .tile-name { color: rgba(255, 255, 255, 0.8); }
+
+/* 空状态 */
+.empty {
+  margin-top: 54px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.empty-title { margin: 0; font-size: 15px; color: #fff; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.6); }
+.empty-sub { margin: 0 0 14px; font-size: 12.5px; color: var(--text-dim); }
+
+/* 分页圆点 */
+.dots {
+  display: flex;
+  gap: 7px;
+  margin-top: 34px;
+  min-height: 8px;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.36);
+  transition: background 0.18s, transform 0.18s;
+}
+
+.dot:hover { background: rgba(255, 255, 255, 0.65); }
+.dot.active { background: #fff; transform: scale(1.25); }
+
