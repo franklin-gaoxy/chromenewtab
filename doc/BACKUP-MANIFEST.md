@@ -6,8 +6,9 @@
 | 生成日期 | 2026-11-10 |
 | 扩展版本 | 1.0.0（Manifest V3） |
 | 包内根目录 | 扩展源码根目录（解压后可直接「加载已解压的扩展程序」） |
-| 包内文件数 | 57（仅为文件，不含目录项） |
+| 包内文件数 | 58（仅为文件，不含目录项） |
 | 包大小 | 约 348 KB |
+| 开源协议 | MIT（`LICENSE`，随包分发） |
 
 包内路径与工程路径**一一对应**（下表中的「工程路径」以工程根 `浏览器插件/` 为基准），因为打包时不带顶层文件夹。
 
@@ -17,6 +18,7 @@
 | --- | --- | --- | --- |
 | `manifest.json` | `manifest.json` | MV3 清单：接管新标签页、权限、后台脚本 | 890 B |
 | `README.md` | `README.md` | 面向使用者的说明：功能、安装、操作流程、FAQ | 11.3 KB |
+| `LICENSE` | `LICENSE` | MIT 开源协议全文（分发时必须保留） | 1.1 KB |
 | `src/newtab.html` | `src/newtab.html` | 页面骨架 + CSS/JS 加载顺序（唯一入口） | 12.1 KB |
 
 ## 2. 目录汇总
@@ -69,7 +71,7 @@
 
 ```powershell
 cd 浏览器插件
-Compress-Archive -Path manifest.json,README.md,src,doc,server,tools `
+Compress-Archive -Path manifest.json,README.md,LICENSE,src,doc,server,tools `
   -DestinationPath dist/qihang-nav-1.0.0.zip -Force
 ```
 
@@ -83,7 +85,7 @@ $root = (Get-Location).Path
 $out  = Join-Path $root 'dist\qihang-nav-1.0.0.zip'
 if (Test-Path $out) { Remove-Item $out -Force }
 
-$files = @(Get-Item (Join-Path $root 'manifest.json'), (Join-Path $root 'README.md'))
+$files = @(Get-Item (Join-Path $root 'manifest.json'), (Join-Path $root 'README.md'), (Join-Path $root 'LICENSE'))
 foreach ($d in @('src', 'doc', 'server', 'tools')) {
   $files += Get-ChildItem -Path (Join-Path $root $d) -Recurse -File
 }
@@ -103,7 +105,7 @@ $zip.Dispose()
 ```powershell
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $z = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path dist\qihang-nav-1.0.0.zip).Path)
-$z.Entries.Count                                              # 57
+$z.Entries.Count                                              # 58
 @($z.Entries | Where-Object { $_.FullName -like '*\*' }).Count  # 0（无反斜杠条目）
 $z.Entries | Where-Object { $_.FullName -eq 'src/newtab.html' } # 入口必须在
 $z.Dispose()

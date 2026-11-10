@@ -16,6 +16,7 @@
 ├─ manifest.json              MV3 清单：newtab 指向 src/newtab.html，SW 指向 src/js/background.js
 │                            权限：storage / favicon / bookmarks；optional_host_permissions 用于 AI 接口
 ├─ README.md                  面向使用者的说明：功能、安装、操作流程、权限、FAQ
+├─ LICENSE                    MIT 开源协议（个人与商用均免费，分发须保留）
 ├─ AGENTS.md                  仓库内 AI 协作约定（指向 doc/）
 ├─ dist/                      发布包 zip（内容清单见 doc/BACKUP-MANIFEST.md）
 ├─ doc/                       文档（本文件、AI-GUIDE、协议、备份清单）
@@ -295,7 +296,8 @@ Get-ChildItem -Recurse src\js -Filter *.js | ForEach-Object { node --check $_.Fu
 
 | 文件 | 内容 |
 | --- | --- |
-| `README.md` | 面向使用者：功能、安装、操作流程、权限、开发验证、FAQ |
+| `README.md` | 面向使用者：功能、安装、操作流程、权限、开发验证、FAQ、开源协议 |
+| `LICENSE` | MIT 协议全文，分发（含发布包）时必须保留 |
 | `doc/ARCHITECTURE.md` | 本文件：目录、数据模型、链路、扩展点、验证方式 |
 | `doc/AI-GUIDE.md` | 给 AI / 新协作者的提示词与工作流程 |
 | `doc/PROTOCOL.md` | QSP v1 同步协议规范（服务端对接依据） |

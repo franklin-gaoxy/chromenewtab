@@ -194,6 +194,7 @@
 ```
 .
 ├─ manifest.json          MV3 清单（入口指向 src/newtab.html）
+├─ LICENSE                MIT 开源协议
 ├─ src/                   ★ 扩展源码（newtab.html / css / js / assets）
 ├─ doc/                   架构与协议文档
 │  ├─ ARCHITECTURE.md     代码地图、数据模型、扩展点（改代码前先读）
@@ -223,7 +224,7 @@ Get-ChildItem -Recurse src\js -Filter *.js | ForEach-Object { node --check $_.Fu
 重新打包：
 
 ```powershell
-Compress-Archive -Path manifest.json,README.md,src,doc,server,tools `
+Compress-Archive -Path manifest.json,README.md,LICENSE,src,doc,server,tools `
   -DestinationPath dist/qihang-nav-1.0.0.zip -Force
 ```
 
@@ -255,3 +256,28 @@ node server.js
 
 **Q：数据会丢吗？**
 数据保存在浏览器本机存储中。清理浏览器数据、卸载扩展会丢失，建议定期用「导出备份」保存 JSON。
+
+---
+
+## 八、开源协议
+
+本项目采用 [MIT License](LICENSE)。
+
+**个人使用免费，商业使用同样免费**，无需授权、无需付费、无需署名到界面。你可以自由地：
+
+- 使用：安装、自用、公司内部部署
+- 修改：改源码、改样式、删功能、加功能
+- 分发：原样或修改后打包分发（包括放进商业产品、上架应用商店）
+- 商用：用于盈利性项目，无需支付任何费用
+
+唯一的要求（MIT 强制条款）：
+
+- 保留原版权声明与协议全文——即分发时把 `LICENSE` 文件一并带上，或在文档中注明来源
+- 本软件按「现状」提供，不含任何担保；作者不对使用后果承担责任
+
+```
+Copyright (c) 2026 franklin-gaoxy
+SPDX-License-Identifier: MIT
+```
+
+如果你在原项目基础上做了公开发布，欢迎在说明中提一句来源，但这不是义务。
