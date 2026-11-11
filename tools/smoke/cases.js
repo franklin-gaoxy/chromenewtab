@@ -313,6 +313,23 @@ function runSmokeTests() {
         state.activeGroupId = prevActiveGroup;
         renderAll();
 
+        /* ---------------- 书签侧边栏：点外部自动收起 ---------------- */
+        openBookmarkPanel();
+        const bmPanel = document.getElementById('bmPanel');
+        ok('bm-open', !!bmPanel && !bmPanel.hidden);
+
+        const pointerDown = (node) =>
+          node.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+
+        pointerDown(bmPanel);
+        ok('bm-keep-inside', !bmPanel.hidden);
+
+        pointerDown(document.getElementById('bmHandle'));
+        ok('bm-keep-handle', !bmPanel.hidden);
+
+        pointerDown(document.body);
+        ok('bm-autoclose', bmPanel.hidden);
+
         done();
       })
       .catch((err) => {

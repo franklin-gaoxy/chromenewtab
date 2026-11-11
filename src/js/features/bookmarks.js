@@ -354,4 +354,13 @@ async function bmLoadTree() {
 /* ---------------- 事件绑定 ---------------- */
 function bindBookmarkEvents() {
   ensureBookmarkPanel();
+
+  // 点击侧边栏以外的任意位置自动收起（悬浮按钮由它自己的 click 负责切换）
+  document.addEventListener('pointerdown', (e) => {
+    const panel = $('bmPanel');
+    if (!panel || panel.hidden) return;
+    const target = e.target;
+    if (target && target.closest && target.closest('.bm-panel, .bm-handle')) return;
+    closeBookmarkPanel();
+  });
 }

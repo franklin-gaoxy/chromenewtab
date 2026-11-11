@@ -186,7 +186,7 @@ aiData = {
 搜索输入 → 90ms 防抖 → `bmCollectMatches()` 扁平结果（先连续包含、再按序字符匹配）。
 拖拽面板左缘 `.bm-resizer` → 实时改宽度 → 松手写回 `state.settings.bmWidth`。
 悬浮按钮在屏幕高度的位置由 `settings.bmHandlePos`（`top` / `center` / `bottom`）决定：`applySettings()` 把它写到 `body[data-bm-pos]`，`bookmarks.css` 对应 16.67% / 50% / 83.33%（整屏三等份）。
-关闭：X 按钮 / `Esc`（main.js 的快捷键链）/ 再次点击悬浮按钮。
+关闭：X 按钮 / `Esc`（main.js 的快捷键链）/ 再次点击悬浮按钮 / 点击面板以外的任意位置（`bindBookmarkEvents()` 里的 document `pointerdown`，已排除 `.bm-panel` 与 `.bm-handle`，所以面板内操作和按钮切换都不会误收起）。
 
 ### 3.7 书签 ↔ 主页同步
 入口：空白处右键 → 「同步书签」→ `openBookmarkSync()` → `openBookmarkPanel(true)` → `showBookmarkSync()` → `renderBookmarkSync()` → `renderBookmarkSyncBody()`。
@@ -346,7 +346,7 @@ Get-ChildItem -Recurse src\js -Filter *.js | ForEach-Object { node --check $_.Fu
 
 # 2) IDE 诊断（在编辑器里对 src 执行 read_lints）
 
-# 3) 冒烟测试（页面内用例，29 项，退出码非 0 即失败）
+# 3) 冒烟测试（页面内用例，34 项，退出码非 0 即失败）
 node tools/smoke/run.js
 ```
 
