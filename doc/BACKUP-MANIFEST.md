@@ -52,6 +52,7 @@
 | --- | --- |
 | `dist/` | 压缩包自身，避免递归打包；已由 `.gitignore` 忽略，仅作 Release 资产上传 |
 | `AGENTS.md` | 仓库内 AI 协作约定，与扩展运行无关 |
+| `doc/images/` | README 效果图，仅用于文档展示，打包时排除（`-x 'doc/images/*'`） |
 | `server/data/` | 运行时数据（首次启动自动创建） |
 | `.git/`、`__pycache__/`、`*.pyc` | 版本控制与本地缓存 |
 
@@ -87,7 +88,9 @@ if (Test-Path $out) { Remove-Item $out -Force }
 
 $files = @(Get-Item (Join-Path $root 'manifest.json'), (Join-Path $root 'README.md'), (Join-Path $root 'LICENSE'))
 foreach ($d in @('src', 'doc', 'server', 'tools')) {
-  $files += Get-ChildItem -Path (Join-Path $root $d) -Recurse -File
+  # doc/images 是 README 效果图，不进发布包
+  $files += Get-ChildItem -Path (Join-Path $root $d) -Recurse -File |
+    Where-Object { $_.FullName -notmatch '\\doc\\images\\' }
 }
 
 $zip = [System.IO.Compression.ZipFile]::Open($out, [System.IO.Compression.ZipArchiveMode]::Create)

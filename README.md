@@ -4,6 +4,10 @@
 
 打开新标签页就能看到：居中的搜索框、图标网格、左侧分组栏、右侧书签抽屉。没有广告、不需要登录、数据只存在本机。
 
+![主页：分组图标网格与搜索框](doc/images/home.png)
+
+![设置：区块默认折叠，「备份与恢复」里是定时备份](doc/images/settings.png)
+
 **它解决什么问题**
 
 | 场景 | 用默认新标签页 | 用启航 |
@@ -210,10 +214,13 @@
 │  ├─ AI-GUIDE.md         AI / 协作者工作流与快速定位表
 │  ├─ PROTOCOL.md         QSP v1 远程同步协议
 │  ├─ BACKUP-MANIFEST.md  发布包内容清单
-│  └─ UPGRADE.md          版本升级与数据保留方案
+│  ├─ UPGRADE.md          版本升级与数据保留方案
+│  └─ images/             README 效果图（由 tools/screenshot.js 生成）
 ├─ .github/workflows/     CI：打标签或推送分支时自动打包发布
 ├─ server/                QSP v1 示例服务端（Node，零依赖）
-├─ tools/gen_assets.py    生成图标与矢量背景
+├─ tools/
+│  ├─ gen_assets.py       生成图标与矢量背景
+│  └─ screenshot.js       生成 README 效果图
 └─ dist/                  本地打包产物（zip，不入版本控制）
 ```
 
@@ -229,6 +236,9 @@ Get-ChildItem -Recurse src\js -Filter *.js | ForEach-Object { node --check $_.Fu
 
 # 页面冒烟（42 项：文件夹、命名、面板、过滤、备份、同步、书签互转、侧边栏收起、设置折叠、定时备份；退出码非 0 即失败）
 node tools/smoke/run.js
+
+# 重新生成 README 效果图（输出到 doc/images/，需要联网取站点图标）
+node tools/screenshot.js
 ```
 
 冒烟用例在 `tools/smoke/cases.js`，运行器 `tools/smoke/run.js` 会自动起无头 Chrome/Edge，浏览器路径可用环境变量 `CHROME_PATH` 指定。加新功能时在 `cases.js` 追加一行 `ok('名字', 断言)` 即可。

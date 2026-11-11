@@ -45,7 +45,7 @@ jobs:
       - name: Package
         run: |
           NAME="qihang-nav-${{ steps.ver.outputs.version }}.zip"
-          zip -r "$NAME" $PACKAGE_PATHS -x '*.DS_Store' '*__pycache__*' '*.pyc' 'dist/*' '*.log'
+          zip -r "$NAME" $PACKAGE_PATHS -x '*.DS_Store' '*__pycache__*' '*.pyc' 'dist/*' '*.log' 'doc/images/*'
           echo "NAME=$NAME" >> "$GITHUB_ENV"
           echo "--- entries ---"
           unzip -Z1 "$NAME" | wc -l
@@ -83,7 +83,7 @@ jobs:
       - name: Package
         run: |
           NAME="qihang-nav-${GITHUB_REF_NAME}.zip"
-          zip -r "$NAME" $PACKAGE_PATHS -x '*.DS_Store' '*__pycache__*' '*.pyc' 'dist/*' '*.log'
+          zip -r "$NAME" $PACKAGE_PATHS -x '*.DS_Store' '*__pycache__*' '*.pyc' 'dist/*' '*.log' 'doc/images/*'
           echo "NAME=$NAME" >> "$GITHUB_ENV"
           unzip -Z1 "$NAME" | grep -c '\\' || true
 

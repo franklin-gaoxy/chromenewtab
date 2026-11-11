@@ -20,10 +20,11 @@
 ├─ AGENTS.md                  仓库内 AI 协作约定（指向 doc/）
 ├─ .github/workflows/         CI：推送 v* 标签发布正式版；推送 main/develop 更新分支快照包
 ├─ dist/                      本地打包产物 zip（不入版本控制，仅作 Release 资产；清单见 doc/BACKUP-MANIFEST.md）
-├─ doc/                       文档（本文件、AI-GUIDE、协议、备份清单、升级指南）
+├─ doc/                       文档（本文件、AI-GUIDE、协议、备份清单、升级指南）+ images/（README 效果图）
 ├─ server/                    QSP v1 示例服务端（Node，无依赖）
 ├─ tools/
 │  ├─ gen_assets.py           生成图标与矢量背景，输出到 src/assets
+│  ├─ screenshot.js           无头浏览器截取 README 效果图，输出到 doc/images
 │  └─ smoke/                  页面冒烟测试：run.js（运行器）+ cases.js（用例）
 └─ src/                       ★ 全部扩展源码
    ├─ newtab.html             页面骨架 + CSS/JS 加载顺序（唯一入口）
