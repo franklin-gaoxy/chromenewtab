@@ -64,6 +64,19 @@ function runSmokeTests() {
     const dy = Math.abs(panel.offsetTop + panel.offsetHeight / 2 - window.innerHeight / 2);
     ok('folder-centered', dx < 2 && dy < 2, 'dx=' + Math.round(dx) + ' dy=' + Math.round(dy));
 
+    // 面板内图标尺寸应与主页磁贴一致
+    const mainIconEl = document.querySelector('#grid .tile-icon');
+    const panelIconEl = panel.querySelector('.f-item-icon');
+    ok(
+      'folder-icon-size',
+      !!mainIconEl &&
+        !!panelIconEl &&
+        mainIconEl.offsetWidth === panelIconEl.offsetWidth &&
+        mainIconEl.offsetHeight === panelIconEl.offsetHeight,
+      'main=' + (mainIconEl ? mainIconEl.offsetWidth : 'none') +
+        ' panel=' + (panelIconEl ? panelIconEl.offsetWidth : 'none')
+    );
+
     closeFolder();
     ok('folder-close', !!mask && mask.hidden);
 

@@ -2,11 +2,15 @@
 
 /* ============ 响应式 ============ */
 @media (max-width: 900px) {
+  /* 只改变量：主页磁贴、网格列宽、文件夹面板会一起跟随 */
+  :root {
+    --tile-col-width: 100px;
+    --tile-icon-size: 56px;
+    --tile-icon-radius: 16px;
+    --tile-icon-img: 32px;
+  }
   .stage { padding-top: 84px; }
-  .grid { max-width: min(100%, calc(var(--cols, 5) * 100px - 8px)); }
   .tile { width: 100%; }
-  .tile-icon { width: 56px; height: 56px; border-radius: 16px; }
-  .tile-icon img { width: 32px; height: 32px; }
   .tile-name { max-width: 86px; font-size: 12px; }
   .engines { gap: 18px; }
 }

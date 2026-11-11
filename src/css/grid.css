@@ -3,8 +3,8 @@
 /* ============ 图标网格 ============ */
 .grid {
   width: 100%;
-  /* 列数由设置项控制：--cols，默认 5 列 */
-  max-width: min(100%, calc(var(--cols, 5) * 112px - 8px));
+  /* 列数由设置项控制：--cols，默认 5 列；列宽与文件夹面板共用变量 */
+  max-width: min(100%, calc(var(--cols, 5) * var(--tile-col-width, 112px) - 8px));
   margin-top: 34px;
   display: grid;
   grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr));
@@ -59,11 +59,11 @@
 
 .tile-icon {
   position: relative;
-  width: 60px;
-  height: 60px;
+  width: var(--tile-icon-size, 60px);
+  height: var(--tile-icon-size, 60px);
   display: grid;
   place-items: center;
-  border-radius: 18px;
+  border-radius: var(--tile-icon-radius, 18px);
   background: rgba(255, 255, 255, 0.16);
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 12px 24px -14px rgba(0, 0, 0, 0.85);
@@ -78,8 +78,8 @@
 }
 
 .tile-icon img {
-  width: 34px;
-  height: 34px;
+  width: var(--tile-icon-img, 34px);
+  height: var(--tile-icon-img, 34px);
   object-fit: contain;
   image-rendering: -webkit-optimize-contrast;
 }
@@ -91,7 +91,7 @@
 }
 
 .tile-icon .letter {
-  font-size: 24px;
+  font-size: var(--tile-icon-letter, 24px);
   font-weight: 600;
   color: #fff;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);

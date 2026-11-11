@@ -12,6 +12,13 @@
   --accent: #6fe0b2;
   --danger: #ff7a7a;
   --ease: cubic-bezier(0.22, 0.68, 0.28, 1);
+
+  /* 图标网格尺寸：主页磁贴与文件夹面板共用，保证两处图标一致 */
+  --tile-col-width: 112px;
+  --tile-icon-size: 60px;
+  --tile-icon-radius: 18px;
+  --tile-icon-img: 34px;
+  --tile-icon-letter: 24px;
 }
 
 * { box-sizing: border-box; }

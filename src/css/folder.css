@@ -38,8 +38,8 @@
 }
 
 .folder-cell img {
-  width: 18px;
-  height: 18px;
+  width: min(18px, 100%);
+  height: min(18px, 100%);
   object-fit: contain;
 }
 
@@ -85,8 +85,11 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  /* 宽度跟主页每行图标数一致（--folder-cols 由 JS 写入） */
-  width: min(calc(var(--folder-cols, 5) * 112px - 8px), calc(100vw - 28px));
+  /* 宽度跟主页每行图标数一致（--folder-cols 由 JS 写入，列宽共用变量） */
+  width: min(
+    calc(var(--folder-cols, 5) * var(--tile-col-width, 112px) - 8px),
+    calc(100vw - 28px)
+  );
   height: min(70vh, 480px);
   padding: 12px 12px 14px;
   border-radius: 20px;
@@ -211,24 +214,25 @@
 
 .f-item-icon {
   position: relative;
-  width: 44px;
-  height: 44px;
+  width: var(--tile-icon-size, 60px);
+  height: var(--tile-icon-size, 60px);
   display: grid;
   place-items: center;
-  border-radius: 13px;
+  border-radius: var(--tile-icon-radius, 18px);
   background: rgba(255, 255, 255, 0.16);
   border: 1px solid rgba(255, 255, 255, 0.18);
   overflow: hidden;
 }
 
 .f-item-icon img {
-  width: 24px;
-  height: 24px;
+  width: var(--tile-icon-img, 34px);
+  height: var(--tile-icon-img, 34px);
   object-fit: contain;
+  image-rendering: -webkit-optimize-contrast;
 }
 
 .f-item-icon .letter {
-  font-size: 17px;
+  font-size: var(--tile-icon-letter, 24px);
   font-weight: 600;
   color: #fff;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);

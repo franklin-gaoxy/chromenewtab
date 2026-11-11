@@ -178,7 +178,7 @@ function refreshOpenFolder() {
 
 /* 面板列数 = 主页每行图标数；窗口太窄时按最小列宽收缩 */
 function folderColumns() {
-  const fit = Math.floor((window.innerWidth - 28) / 96);
+  const fit = Math.floor((window.innerWidth - 28) / 100);
   return Math.max(3, Math.min(perRow(), fit));
 }
 
