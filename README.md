@@ -222,7 +222,7 @@
 # 语法检查所有脚本
 Get-ChildItem -Recurse src\js -Filter *.js | ForEach-Object { node --check $_.FullName }
 
-# 页面冒烟（16 项：文件夹、备份、同步、书签互转；退出码非 0 即失败）
+# 页面冒烟（23 项：文件夹、命名、备份、同步、书签互转、大文件夹；退出码非 0 即失败）
 node tools/smoke/run.js
 ```
 

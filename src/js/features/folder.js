@@ -24,6 +24,15 @@ function folderSitesOf(item) {
   return item.kind === 'folder' ? item.items.slice() : [item];
 }
 
+/* 同分组内不重名：文件夹 / 文件夹 2 / 文件夹 3 … */
+function uniqueFolderTitle(group, base) {
+  const used = new Set(group.items.filter((it) => it.kind === 'folder').map((it) => it.title));
+  if (!used.has(base)) return base;
+  let i = 2;
+  while (used.has(base + ' ' + i)) i += 1;
+  return base + ' ' + i;
+}
+
 /* 把 from 合并进 to：目标已是文件夹则放入，否则两者合成新文件夹 */
 function mergeItems(fromGroupId, fromId, toGroupId, toId) {
   if (!fromId || !toId || fromId === toId) return;
@@ -58,7 +67,7 @@ function mergeItems(fromGroupId, fromId, toGroupId, toId) {
     const folder = {
       id: uid('f'),
       kind: 'folder',
-      title: from.kind === 'folder' ? from.title : '文件夹',
+      title: uniqueFolderTitle(toGroup, from.kind === 'folder' ? from.title : '文件夹'),
       items: [to].concat(incoming)
     };
     toGroup.items.splice(at, 1, folder);
@@ -177,9 +186,20 @@ function renderFolderPanel() {
   const folder = currentFolder();
   if (!folder) return;
 
+  // 重绘时保留滚动位置（大文件夹里删改一项不该跳回顶部）
+  const prevGrid = panel.querySelector('.folder-grid');
+  const scrollTop = prevGrid ? prevGrid.scrollTop : 0;
+
+  // 内容多时切成 6 列宽面板，减少滚动距离
+  panel.classList.toggle('folder-wide', folder.items.length > 24);
+
   panel.innerHTML = '';
   panel.appendChild(buildFolderHead(folder));
-  panel.appendChild(buildFolderGrid(folder));
+
+  const grid = buildFolderGrid(folder);
+  panel.appendChild(grid);
+  grid.scrollTop = scrollTop;
+
   positionFolderPanel(panel, openFolderRef.rect);
 }
 
@@ -256,7 +276,8 @@ function buildFolderGrid(folder) {
 /* 以文件夹磁贴为锚点摆放，空间不够就翻到上方 */
 function positionFolderPanel(panel, rect) {
   const pad = 14;
-  const width = Math.max(220, Math.min(340, Math.round(window.innerWidth / 2)));
+  const maxWidth = panel.classList.contains('folder-wide') ? 680 : 340;
+  const width = Math.max(220, Math.min(maxWidth, window.innerWidth - pad * 2));
   panel.style.width = width + 'px';
 
   if (!rect) {

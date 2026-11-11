@@ -54,6 +54,17 @@ function runSmokeTests() {
     closeFolder();
     ok('folder-close', !!mask && mask.hidden);
 
+    /* ---------------- 默认命名：文件夹 / 文件夹 2 ---------------- */
+    ok('folder-name-1', folder.title === '文件夹', folder.title);
+
+    mergeItems(group.id, group.items[2].id, group.id, group.items[1].id);
+    const folderList = group.items.filter((it) => it.kind === 'folder');
+    ok(
+      'folder-name-2',
+      folderList.length === 2 && folderList[1].title === '文件夹 2',
+      folderList.map((it) => it.title).join(',')
+    );
+
     /* ---------------- 数据层：备份结构 / 一层约束 ---------------- */
     const snapshot = JSON.parse(
       JSON.stringify({
@@ -183,6 +194,65 @@ function runSmokeTests() {
         const sub = keepFolder && keepFolder.children.find((c) => !c.url && c.title === '工作');
         ok('bm-export-group', !!groupFolder);
         ok('bm-export-sub', !!sub && sub.children.filter((c) => c.url).length === 2);
+
+        /* ---------------- 大文件夹（120 个图标）展示 ---------------- */
+        const sites = [];
+        for (let i = 0; i < 120; i += 1) {
+          sites.push({
+            id: 'i_many_' + i,
+            title: '站点' + i,
+            url: 'https://s' + i + '.example.com',
+            icon: ''
+          });
+        }
+        state.groups.push({
+          id: 'g_many',
+          name: '大文件夹测试',
+          items: [{ id: 'f_many', kind: 'folder', title: '大文件夹', items: sites }]
+        });
+        const prevActiveGroup = state.activeGroupId;
+        state.activeGroupId = 'g_many';
+        renderAll();
+
+        const manyTile = document.querySelector('.tile-folder[data-id="f_many"]');
+        ok('many-tile', !!manyTile);
+        if (manyTile) manyTile.click();
+
+        const manyPanel = document.getElementById('folderPanel');
+        const box = manyPanel.getBoundingClientRect();
+        ok(
+          'many-in-viewport',
+          box.top >= 0 &&
+            box.bottom <= window.innerHeight + 1 &&
+            box.left >= 0 &&
+            box.right <= window.innerWidth + 1,
+          'top=' + Math.round(box.top) + ' bottom=' + Math.round(box.bottom) + ' vh=' + window.innerHeight
+        );
+
+        const manyGrid = manyPanel.querySelector('.folder-grid');
+        ok(
+          'many-scrollable',
+          !!manyGrid && manyGrid.scrollHeight > manyGrid.clientHeight,
+          manyGrid ? manyGrid.scrollHeight + '/' + manyGrid.clientHeight : 'no grid'
+        );
+        ok(
+          'many-no-hscroll',
+          !!manyGrid && manyGrid.scrollWidth <= manyGrid.clientWidth + 1,
+          manyGrid ? manyGrid.scrollWidth + '/' + manyGrid.clientWidth : 'no grid'
+        );
+
+        // 重绘（如删掉一项）后滚动位置不应跳回顶部
+        if (manyGrid) manyGrid.scrollTop = 200;
+        renderAll();
+        const keptScroll = document.querySelector('.folder-grid');
+        ok('many-scroll-kept', !!keptScroll && keptScroll.scrollTop > 0,
+          'scrollTop=' + (keptScroll ? keptScroll.scrollTop : 'none'));
+
+        closeFolder();
+        state.groups = state.groups.filter((g) => g.id !== 'g_many');
+        state.activeGroupId = prevActiveGroup;
+        renderAll();
+
         done();
       })
       .catch((err) => {

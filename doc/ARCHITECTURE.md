@@ -208,6 +208,8 @@ aiData = {
 - 管理：`openFolderMenu()`（打开 / 重命名 / 解散 / 删除）、`openFolderItemMenu()`（打开 / 复制 / 编辑 / 移出 / 删除）；`dissolveFolder()` 把站点按原顺序放回分组。
 - 定位工具：`findItemEntry()`（data.js，会进一层文件夹）、`collectGroupUrls()`（含文件夹内网址）、`groupOfFolder()` / `findFolder()`（folder.js）。
 - 数据约束：文件夹里只能是网站（`normalizeItem()` 丢弃嵌套文件夹与组件），因此不存在多层结构。
+- 命名：新建默认叫「文件夹」，同分组内重名时自动加序号（`uniqueFolderTitle()` → 文件夹 / 文件夹 2 / 文件夹 3）。
+- 大文件夹：超过 24 项时面板加 `.folder-wide`（8 列、宽至 680px、单格收窄），由 `.folder-grid` 自身滚动；`renderFolderPanel()` 重绘前后保留 `scrollTop`，删改一项不会跳回顶部。
 
 ---
 
@@ -343,7 +345,7 @@ Get-ChildItem -Recurse src\js -Filter *.js | ForEach-Object { node --check $_.Fu
 
 # 2) IDE 诊断（在编辑器里对 src 执行 read_lints）
 
-# 3) 冒烟测试（页面内用例，16 项，退出码非 0 即失败）
+# 3) 冒烟测试（页面内用例，23 项，退出码非 0 即失败）
 node tools/smoke/run.js
 ```
 
