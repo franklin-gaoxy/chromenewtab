@@ -16,7 +16,7 @@
 
 - 技术栈：原生 HTML / CSS / JavaScript（Manifest V3），**无框架、无构建、无第三方依赖**
 - 浏览器：Chrome / Edge 等 Chromium 内核浏览器（Chrome 100+）
-- 安装方式：下载仓库中的 `dist/qihang-nav-1.0.0.zip` → 解压 → 「加载已解压的扩展程序」（见[安装](#二安装从仓库包三步)）
+- 安装方式：下载仓库中的 `dist/qihang-nav-1.1.0.zip` → 解压 → 「加载已解压的扩展程序」（见[安装](#二安装从仓库包三步)）
 
 ---
 
@@ -87,10 +87,10 @@
 
 发布包有两个下载位置（内容相同，任选其一）：
 
-- **Release 资产（推荐，一键下载）**：[Releases · v1.0.0](https://github.com/franklin-gaoxy/chromenewtab/releases/latest) → 点 `qihang-nav-1.0.0.zip`
-- **仓库内文件**：[`dist/qihang-nav-1.0.0.zip`](dist/qihang-nav-1.0.0.zip)（GitHub 上点该文件 → 右侧「Download raw file」）
+- **Release 资产（推荐，一键下载）**：[Releases · v1.1.0](https://github.com/franklin-gaoxy/chromenewtab/releases/latest) → 点 `qihang-nav-1.1.0.zip`
+- **仓库内文件**：[`dist/qihang-nav-1.1.0.zip`](dist/qihang-nav-1.1.0.zip)（GitHub 上点该文件 → 右侧「Download raw file」）
 
-1. **下载** `qihang-nav-1.0.0.zip`
+1. **下载** `qihang-nav-1.1.0.zip`
 2. **解压**到任意**固定位置**，例如 `D:\Extensions\qihang-nav`
    - 解压后的根目录里应能直接看到 `manifest.json` 和 `src/` 文件夹
    - 请保留该文件夹，浏览器加载的是解压后的目录，而不是 zip 本身
@@ -233,7 +233,7 @@ node tools/smoke/run.js
 
 ```powershell
 Compress-Archive -Path manifest.json,README.md,LICENSE,src,doc,server,tools `
-  -DestinationPath dist/qihang-nav-1.0.0.zip -Force
+  -DestinationPath dist/qihang-nav-1.1.0.zip -Force
 ```
 
 > 打包不含顶层文件夹：解压后的目录即扩展根目录（含 `manifest.json` 与 `src/`）。
