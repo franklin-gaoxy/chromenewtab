@@ -27,7 +27,7 @@ function applySettings() {
 /* 每行图标数量（3 ~ 8） */
 function perRow() {
   const n = Math.round(Number(state.settings.perRow));
-  if (!Number.isFinite(n)) return 5;
+  if (!Number.isFinite(n)) return 8;
   return Math.min(8, Math.max(3, n));
 }
 

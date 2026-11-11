@@ -109,7 +109,7 @@ state = {
     customBg: '',          // 自定义背景（URL 或 dataURL）
     openInNewTab: true,
     showLabels: true,
-    perRow: 5,             // 每行图标数 3~8
+    perRow: 8,             // 每行图标数 3~8（默认 8）
     align: 'center',       // center | left | right
     bmWidth: 340,          // 书签侧边栏宽度（拖拽后写回）
     bmHandlePos: 'center', // 书签悬浮按钮位置：top | center | bottom

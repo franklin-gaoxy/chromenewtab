@@ -117,7 +117,7 @@ const DEFAULT_SETTINGS = {
   customBg: '',
   openInNewTab: true,
   showLabels: true,
-  perRow: 5,          // 每行图标数量（3 ~ 8）
+  perRow: 8,          // 每行图标数量（3 ~ 8，默认 8）
   align: 'center',    // 网格对齐：center | left | right
   bmWidth: 340,       // 书签侧边栏宽度
   bmHandlePos: 'center', // 书签按钮在屏幕高度的位置：top | center | bottom

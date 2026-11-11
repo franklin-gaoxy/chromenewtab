@@ -74,7 +74,7 @@ function buildSettingsPanel() {
 
   const optPerRow = $('optPerRow');
   optPerRow.addEventListener('change', () => {
-    const n = Math.min(8, Math.max(3, Math.round(Number(optPerRow.value)) || 5));
+    const n = Math.min(8, Math.max(3, Math.round(Number(optPerRow.value)) || 8));
     optPerRow.value = n;
     state.settings.perRow = n;
     ui.page = 0;
