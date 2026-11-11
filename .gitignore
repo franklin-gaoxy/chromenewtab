@@ -17,3 +17,6 @@ desktop.ini
 # 临时文件
 *.tmp
 *.log
+
+# 发布包（只作为 Release 资产上传，不纳入版本控制）
+dist/*.zip

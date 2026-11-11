@@ -16,7 +16,7 @@
 
 - 技术栈：原生 HTML / CSS / JavaScript（Manifest V3），**无框架、无构建、无第三方依赖**
 - 浏览器：Chrome / Edge 等 Chromium 内核浏览器（Chrome 100+）
-- 安装方式：下载仓库中的 `dist/qihang-nav-1.1.0.zip` → 解压 → 「加载已解压的扩展程序」（见[安装](#二安装从仓库包三步)）
+- 安装方式：从 [Releases](https://github.com/franklin-gaoxy/chromenewtab/releases/latest) 下载 `qihang-nav-1.1.0.zip` → 解压 → 「加载已解压的扩展程序」（见[安装](#二安装三步)）
 
 ---
 
@@ -83,12 +83,11 @@
 
 ---
 
-## 二、安装（从仓库包，三步）
+## 二、安装（三步）
 
-发布包有两个下载位置（内容相同，任选其一）：
+发布包只通过 **Release 资产**分发（源码仓库内不含 zip，打包由发布流程生成）：
 
-- **Release 资产（推荐，一键下载）**：[Releases · v1.1.0](https://github.com/franklin-gaoxy/chromenewtab/releases/latest) → 点 `qihang-nav-1.1.0.zip`
-- **仓库内文件**：[`dist/qihang-nav-1.1.0.zip`](dist/qihang-nav-1.1.0.zip)（GitHub 上点该文件 → 右侧「Download raw file」）
+- **下载地址**：[Releases · v1.1.0](https://github.com/franklin-gaoxy/chromenewtab/releases/tag/v1.1.0) → 点 `qihang-nav-1.1.0.zip`
 
 1. **下载** `qihang-nav-1.1.0.zip`
 2. **解压**到任意**固定位置**，例如 `D:\Extensions\qihang-nav`
@@ -210,7 +209,7 @@
 │  └─ BACKUP-MANIFEST.md  发布包内容清单
 ├─ server/                QSP v1 示例服务端（Node，零依赖）
 ├─ tools/gen_assets.py    生成图标与矢量背景
-└─ dist/                  发布包（zip）
+└─ dist/                  本地打包产物（zip，不入版本控制）
 ```
 
 详细模块划分、关键链路与「新增功能应该改哪个文件」见 [`doc/ARCHITECTURE.md`](doc/ARCHITECTURE.md)；AI 协作规则见 [`doc/AI-GUIDE.md`](doc/AI-GUIDE.md)。
@@ -237,6 +236,8 @@ Compress-Archive -Path manifest.json,README.md,LICENSE,src,doc,server,tools `
 ```
 
 > 打包不含顶层文件夹：解压后的目录即扩展根目录（含 `manifest.json` 与 `src/`）。
+> 生成的 zip 已被 `.gitignore` 忽略，**只作为 GitHub Release 资产上传，不提交到源码仓库**。
+> 跨平台分发请用 [`doc/BACKUP-MANIFEST.md`](doc/BACKUP-MANIFEST.md) 第 6 节的写法（条目名用 `/`）；Windows PowerShell 5.1 的 `Compress-Archive` 会写成 `\`。
 
 示例服务端（可选，用于远程同步）：
 

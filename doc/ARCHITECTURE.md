@@ -18,7 +18,7 @@
 ├─ README.md                  面向使用者的说明：功能、安装、操作流程、权限、FAQ
 ├─ LICENSE                    MIT 开源协议（个人与商用均免费，分发须保留）
 ├─ AGENTS.md                  仓库内 AI 协作约定（指向 doc/）
-├─ dist/                      发布包 zip（内容清单见 doc/BACKUP-MANIFEST.md）
+├─ dist/                      本地打包产物 zip（不入版本控制，仅作 Release 资产；清单见 doc/BACKUP-MANIFEST.md）
 ├─ doc/                       文档（本文件、AI-GUIDE、协议、备份清单）
 ├─ server/                    QSP v1 示例服务端（Node，无依赖）
 ├─ tools/
