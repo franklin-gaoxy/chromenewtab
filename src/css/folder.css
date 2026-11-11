@@ -1,4 +1,4 @@
-/* ============ 文件夹：磁贴预览 + 毛玻璃面板 ============ */
+/* ============ 文件夹：磁贴预览 + 固定尺寸面板 ============ */
 
 /* ---- 文件夹磁贴（2×2 预览） ---- */
 .tile-folder .folder-icon {
@@ -69,30 +69,30 @@
   box-shadow: 0 0 0 1px rgba(111, 224, 178, 0.6), 0 16px 30px -14px rgba(0, 0, 0, 0.9);
 }
 
-/* ---- 面板 ---- */
+/* ---- 面板：固定尺寸、居中、深色不透明 ---- */
 .folder-mask {
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: rgba(6, 12, 10, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 8, 7, 0.46);
   animation: folderMaskIn 0.16s var(--ease) both;
 }
 
 .folder-panel {
-  position: fixed;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: min(72vh, 520px);
+  /* 宽度跟主页每行图标数一致（--folder-cols 由 JS 写入） */
+  width: min(calc(var(--folder-cols, 5) * 112px - 8px), calc(100vw - 28px));
+  height: min(70vh, 480px);
   padding: 12px 12px 14px;
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.26);
-  background: rgba(18, 28, 24, 0.3);
-  backdrop-filter: blur(26px) saturate(160%);
-  -webkit-backdrop-filter: blur(26px) saturate(160%);
-  box-shadow:
-    0 28px 64px -26px rgba(0, 0, 0, 0.88),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #18211d;
+  box-shadow: 0 30px 70px -28px rgba(0, 0, 0, 0.92);
   animation: folderIn 0.18s var(--ease) both;
 }
 
@@ -149,42 +149,49 @@
 
 .folder-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-  overflow-y: auto;
-  /* 内容超过面板 max-height 时收缩并滚动，而不是把面板撑破 */
+  grid-template-columns: repeat(var(--folder-cols, 5), minmax(0, 1fr));
+  gap: 8px;
+  flex: 1;
   min-height: 0;
+  overflow-y: auto;
+  align-content: start;
   padding: 2px 4px 2px 2px;
   scrollbar-gutter: stable;
 }
 
-/* 图标很多（> 24）时切 8 列、面板加宽、单格收窄，减少滚动距离 */
-.folder-panel.folder-wide .folder-grid {
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+/* 面板内过滤框 */
+.folder-filter {
+  display: block;
 }
 
-.folder-panel.folder-wide .f-item {
-  padding: 6px 3px 4px;
-  gap: 4px;
+.folder-filter-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 12.5px;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
 }
 
-.folder-panel.folder-wide .f-item-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 11px;
+.folder-filter-input::placeholder {
+  color: var(--text-faint);
 }
 
-.folder-panel.folder-wide .f-item-icon img {
-  width: 20px;
-  height: 20px;
+.folder-filter-input:focus {
+  border-color: rgba(111, 224, 178, 0.5);
+  background: rgba(255, 255, 255, 0.09);
 }
 
-.folder-panel.folder-wide .f-item-icon .letter {
-  font-size: 15px;
-}
-
-.folder-panel.folder-wide .f-item-name {
-  font-size: 11px;
+.folder-empty-tip {
+  grid-column: 1 / -1;
+  margin: 16px 0 4px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--text-dim);
 }
 
 .f-item {
@@ -248,11 +255,4 @@
 .f-item.f-add .f-item-icon svg { width: 20px; height: 20px; }
 .f-item.f-add .f-item-name { color: var(--text-dim); }
 
-@media (max-width: 900px) {
-  .folder-panel.folder-wide .folder-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-}
-
-@media (max-width: 640px) {
-  .folder-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .folder-panel.folder-wide .folder-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
+/* 列数由 JS 的 --folder-cols 决定（已按窗口宽度收缩），这里不再覆盖 */

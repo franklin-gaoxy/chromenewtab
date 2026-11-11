@@ -46,10 +46,23 @@ function runSmokeTests() {
     const panel = document.getElementById('folderPanel');
     const cells = panel ? panel.querySelectorAll('.f-item').length : 0;
     ok('folder-panel', !!mask && !mask.hidden && cells === 3, 'cells=' + cells);
+    const panelStyle = getComputedStyle(panel);
     ok(
-      'folder-blur',
-      !!panel && (getComputedStyle(panel).backdropFilter || '').indexOf('blur') >= 0
+      'folder-opaque',
+      panelStyle.backdropFilter === 'none' || panelStyle.backdropFilter === '',
+      'backdrop=' + panelStyle.backdropFilter
     );
+
+    const firstGrid = panel.querySelector('.folder-grid');
+    const gridCols = firstGrid
+      ? getComputedStyle(firstGrid).gridTemplateColumns.split(' ').length
+      : 0;
+    ok('folder-cols', gridCols === folderColumns(), 'cols=' + gridCols + ' expect=' + folderColumns());
+
+    // 用 offset* 量，避开入场动画的 transform
+    const dx = Math.abs(panel.offsetLeft + panel.offsetWidth / 2 - window.innerWidth / 2);
+    const dy = Math.abs(panel.offsetTop + panel.offsetHeight / 2 - window.innerHeight / 2);
+    ok('folder-centered', dx < 2 && dy < 2, 'dx=' + Math.round(dx) + ' dy=' + Math.round(dy));
 
     closeFolder();
     ok('folder-close', !!mask && mask.hidden);
@@ -247,6 +260,40 @@ function runSmokeTests() {
         const keptScroll = document.querySelector('.folder-grid');
         ok('many-scroll-kept', !!keptScroll && keptScroll.scrollTop > 0,
           'scrollTop=' + (keptScroll ? keptScroll.scrollTop : 'none'));
+
+        // 面板内的滚轮不能穿透到底层（翻页 / 切分组）
+        const pageBefore = ui.page;
+        const groupBefore = state.activeGroupId;
+        const wheelEvt = new WheelEvent('wheel', {
+          deltaY: 120,
+          bubbles: true,
+          cancelable: true
+        });
+        keptScroll.dispatchEvent(wheelEvt);
+        ok(
+          'folder-wheel-passthrough',
+          !wheelEvt.defaultPrevented && ui.page === pageBefore && state.activeGroupId === groupBefore,
+          'prevented=' + wheelEvt.defaultPrevented + ' page=' + ui.page + '/' + pageBefore
+        );
+
+        // 面板内过滤：站点11 应命中 站点11 + 站点110~119
+        const filterInput = manyPanel.querySelector('.folder-filter-input');
+        ok('folder-filter-input', !!filterInput);
+        if (filterInput) {
+          filterInput.value = '站点11';
+          filterInput.dispatchEvent(new Event('input'));
+          // 模糊匹配带顺序兜底，命中数不精确，只要明显减少即可
+          const matched = manyPanel.querySelectorAll('.f-item:not(.f-add)').length;
+          ok('folder-filter', matched > 0 && matched < 120, 'matched=' + matched);
+          filterInput.value = 'zzzz-no-hit';
+          filterInput.dispatchEvent(new Event('input'));
+          ok(
+            'folder-filter-empty',
+            !!manyPanel.querySelector('.folder-empty-tip')
+          );
+          filterInput.value = '';
+          filterInput.dispatchEvent(new Event('input'));
+        }
 
         closeFolder();
         state.groups = state.groups.filter((g) => g.id !== 'g_many');

@@ -39,7 +39,7 @@ function bindGlobalShortcuts() {
 
       const target = e.target;
       if (target && target.closest &&
-          target.closest('.rail, .drawer-mask, .mask, .menu, .bm-panel, .bm-handle')) return;
+          target.closest('.rail, .drawer-mask, .mask, .menu, .bm-panel, .bm-handle, .folder-mask')) return;
 
       // 搜索状态下完全交给浏览器，不拦截、不切分组
       if (ui.query) return;

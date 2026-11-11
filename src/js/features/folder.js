@@ -4,11 +4,11 @@
  * 数据：{ id, kind: 'folder', title, items: [{ id, title, url, icon }] }
  * 交互：
  *   - 磁贴拖到另一个磁贴中间 → 合并成文件夹；拖到文件夹上 → 放进去
- *   - 点击文件夹 → 打开毛玻璃面板
+ *   - 点击文件夹 → 打开固定尺寸的深色面板（可过滤）
  *   - 右键文件夹 / 面板内的站点 → 菜单
  * ============================================================ */
 
-let openFolderRef = null; // { groupId, folderId, rect }
+let openFolderRef = null; // { groupId, folderId, filter }
 
 /* ---------------- 合并 ---------------- */
 function canMergeItems(from, to) {
@@ -112,7 +112,7 @@ function createFolderTile(item, groupId, searching, index) {
 
   tile.addEventListener('click', (e) => {
     if (e.target.closest('.tile-more')) return;
-    openFolder(groupId, item, tile);
+    openFolder(groupId, item);
   });
 
   attachTileDrag(tile, item, groupId, searching);
@@ -141,15 +141,11 @@ function fillFolderPreview(box, item) {
   });
 }
 
-/* ---------------- 文件夹面板（毛玻璃） ---------------- */
-function openFolder(groupId, folder, tileEl) {
+/* ---------------- 文件夹面板（固定尺寸深色弹窗） ---------------- */
+function openFolder(groupId, folder) {
   const mask = $('folderMask');
   if (!mask) return;
-  openFolderRef = {
-    groupId,
-    folderId: folder.id,
-    rect: tileEl ? tileEl.getBoundingClientRect() : null
-  };
+  openFolderRef = { groupId, folderId: folder.id, filter: '' };
   mask.hidden = false;
   renderFolderPanel();
 }
@@ -180,6 +176,12 @@ function refreshOpenFolder() {
   renderFolderPanel();
 }
 
+/* 面板列数 = 主页每行图标数；窗口太窄时按最小列宽收缩 */
+function folderColumns() {
+  const fit = Math.floor((window.innerWidth - 28) / 96);
+  return Math.max(3, Math.min(perRow(), fit));
+}
+
 function renderFolderPanel() {
   const panel = $('folderPanel');
   if (!panel || !openFolderRef) return;
@@ -190,17 +192,28 @@ function renderFolderPanel() {
   const prevGrid = panel.querySelector('.folder-grid');
   const scrollTop = prevGrid ? prevGrid.scrollTop : 0;
 
-  // 内容多时切成 6 列宽面板，减少滚动距离
-  panel.classList.toggle('folder-wide', folder.items.length > 24);
+  panel.style.setProperty('--folder-cols', String(folderColumns()));
 
   panel.innerHTML = '';
   panel.appendChild(buildFolderHead(folder));
-
+  panel.appendChild(buildFolderFilter());
   const grid = buildFolderGrid(folder);
   panel.appendChild(grid);
   grid.scrollTop = scrollTop;
+}
 
-  positionFolderPanel(panel, openFolderRef.rect);
+/* 只重建网格：过滤输入时用，避免输入框失焦 */
+function refreshFolderGrid(resetScroll) {
+  const panel = $('folderPanel');
+  const folder = currentFolder();
+  if (!panel || !folder) return;
+
+  const old = panel.querySelector('.folder-grid');
+  if (!old) return;
+
+  const fresh = buildFolderGrid(folder);
+  if (!resetScroll) fresh.scrollTop = old.scrollTop;
+  old.replaceWith(fresh);
 }
 
 function buildFolderHead(folder) {
@@ -227,11 +240,63 @@ function buildFolderHead(folder) {
   return head;
 }
 
+/* 面板内过滤框：标题 / 网址模糊匹配 */
+function buildFolderFilter() {
+  const wrap = document.createElement('label');
+  wrap.className = 'folder-filter';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'folder-filter-input';
+  input.placeholder = '在文件夹内搜索';
+  input.value = openFolderRef.filter || '';
+  input.spellcheck = false;
+  input.autocomplete = 'off';
+
+  input.addEventListener('input', () => {
+    openFolderRef.filter = input.value;
+    refreshFolderGrid(true);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      if (input.value) {
+        input.value = '';
+        openFolderRef.filter = '';
+        refreshFolderGrid(true);
+      } else {
+        closeFolder();
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+    }
+  });
+
+  wrap.appendChild(input);
+  return wrap;
+}
+
+/* 标题 / 网址模糊匹配：先连续包含，再退化为按字符顺序 */
+function folderHit(site, query) {
+  if (!query) return true;
+  const hay = (site.title + ' ' + site.url).toLowerCase();
+  if (hay.indexOf(query) >= 0) return true;
+  let i = 0;
+  for (let j = 0; j < hay.length && i < query.length; j += 1) {
+    if (hay[j] === query[i]) i += 1;
+  }
+  return i === query.length;
+}
+
 function buildFolderGrid(folder) {
   const grid = document.createElement('div');
   grid.className = 'folder-grid';
 
-  folder.items.forEach((site) => {
+  const query = (openFolderRef.filter || '').trim().toLowerCase();
+  const sites = folder.items.filter((site) => folderHit(site, query));
+
+  sites.forEach((site) => {
     const cell = document.createElement('button');
     cell.type = 'button';
     cell.className = 'f-item';
@@ -259,6 +324,13 @@ function buildFolderGrid(folder) {
     grid.appendChild(cell);
   });
 
+  if (!sites.length) {
+    const tip = document.createElement('p');
+    tip.className = 'folder-empty-tip';
+    tip.textContent = query ? '没有匹配的站点' : '这个文件夹还是空的';
+    grid.appendChild(tip);
+  }
+
   const add = document.createElement('button');
   add.type = 'button';
   add.className = 'f-item f-add';
@@ -271,33 +343,6 @@ function buildFolderGrid(folder) {
   grid.appendChild(add);
 
   return grid;
-}
-
-/* 以文件夹磁贴为锚点摆放，空间不够就翻到上方 */
-function positionFolderPanel(panel, rect) {
-  const pad = 14;
-  const maxWidth = panel.classList.contains('folder-wide') ? 680 : 340;
-  const width = Math.max(220, Math.min(maxWidth, window.innerWidth - pad * 2));
-  panel.style.width = width + 'px';
-
-  if (!rect) {
-    panel.style.left = Math.round((window.innerWidth - width) / 2) + 'px';
-    panel.style.top = '18vh';
-    return;
-  }
-
-  let left = rect.left + rect.width / 2 - width / 2;
-  left = Math.max(pad, Math.min(left, window.innerWidth - width - pad));
-
-  const height = panel.offsetHeight || 260;
-  let top = rect.bottom + 12;
-  if (top + height > window.innerHeight - pad) {
-    const above = rect.top - height - 12;
-    top = above >= pad ? above : Math.max(pad, window.innerHeight - height - pad);
-  }
-
-  panel.style.left = Math.round(left) + 'px';
-  panel.style.top = Math.round(top) + 'px';
 }
 
 /* ---------------- 菜单与文件夹操作 ---------------- */
@@ -341,8 +386,7 @@ function findFolder(groupId, folderId) {
 function openFolderById(groupId, folderId) {
   const folder = findFolder(groupId, folderId);
   if (!folder) return;
-  const tile = document.querySelector('.tile-folder[data-id="' + folderId + '"]');
-  openFolder(groupId, folder, tile);
+  openFolder(groupId, folder);
 }
 
 function renameFolder(groupId, folderId) {
@@ -425,9 +469,11 @@ function bindFolderEvents() {
     });
   }
 
+  // 窗口变化时重算列数（面板本身由 flex 居中，无需重新定位）
   window.addEventListener('resize', () => {
-    const node = $('folderPanel');
-    if (!node || !openFolderRef || mask.hidden) return;
-    positionFolderPanel(node, openFolderRef.rect);
+    if (!openFolderRef || mask.hidden) return;
+    const panelNode = $('folderPanel');
+    if (!panelNode) return;
+    panelNode.style.setProperty('--folder-cols', String(folderColumns()));
   });
 }

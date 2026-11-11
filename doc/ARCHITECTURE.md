@@ -40,7 +40,7 @@
    │  ├─ widgets.css          组件磁贴样式 + 添加组件弹窗
    │  ├─ ai.css               AI 对话弹窗（会话栏 / 消息 / 输入区 / 设置层）
    │  ├─ bookmarks.css        浏览器书签侧边栏（悬浮按钮 / 树 / 搜索 / 同步面板）
-   │  ├─ folder.css           文件夹磁贴与毛玻璃面板
+   │  ├─ folder.css           文件夹磁贴与固定尺寸面板（深色、列数跟随 perRow）
    │  └─ responsive.css       媒体查询断点（最后加载）
    └─ js/
       ├─ store.js             常量与数据层：搜索引擎、背景预设、默认数据、normalizeData、store 封装、工具函数（uid/esc/URL/favicon）
@@ -57,7 +57,7 @@
       │  ├─ rail.js           分组栏渲染、选择、重命名、新建
       │  ├─ search.js         搜索分类、引擎切换、doSearch
       │  ├─ grid.js           可见列表、分页、磁贴、拖拽排序/合并落点、renderAll
-      │  ├─ folder.js         文件夹：拖拽合并、磁贴预览、毛玻璃面板、重命名/解散/删除
+      │  ├─ folder.js         文件夹：拖拽合并、磁贴预览、固定面板、面板内过滤、重命名/解散/删除
       │  ├─ menu.js           右键菜单、站点/分组增删、openCanvasMenu（右键入口）
       │  ├─ modal.js          openModal/closeModal/openSettingsPanel + 通用关闭绑定
       │  ├─ link-modal.js     站点编辑弹窗与表单校验
@@ -204,12 +204,13 @@ aiData = {
   - 目标是站点 → 在目标位置新建 `kind:'folder'`，包含两者（文件夹标题沿用源的）。
   - 源 / 目标是组件时不合并；跨分组同样适用（先摘除源，再按 id 重新定位目标，避免同组下标错位）。
 - 渲染：`renderGrid()` 按 `item.kind` 分派，文件夹走 `createFolderTile()` → `fillFolderPreview()` 画 2×2 预览（超过 4 个时第 4 格显示 `+n`）。
-- 面板：点击文件夹 → `openFolder()` → `$('folderMask')` + `$('folderPanel')`（`css/folder.css`，`backdrop-filter: blur()` 毛玻璃），内容由 `renderFolderPanel()` 生成；位置以磁贴 `rect` 为锚点，`renderGrid()` 结尾调用 `refreshOpenFolder()` 同步数据变化。关闭走 `closeFolder()`（遮罩 / X / `Esc`）。
+- 面板：点击文件夹 → `openFolder(groupId, folder)` → `$('folderMask')`（flex 居中）+ `$('folderPanel')`（`css/folder.css`：深色不透明 `#18211d`、固定 `height: min(70vh, 480px)`、宽度 `--folder-cols * 112px - 8px`）。`renderGrid()` 结尾调用 `refreshOpenFolder()` 同步数据变化。关闭走 `closeFolder()`（遮罩 / X / `Esc`）。
+- 列数与过滤：`folderColumns()` = `perRow()`（窗口过窄时按 96px 最小列宽收缩），结果写进 `--folder-cols`；面板内的 `.folder-filter-input` 输入时走 `refreshFolderGrid()` 只重建网格（输入框不失焦），`folderHit()` 做「连续包含 → 按字符顺序」模糊匹配，无结果时显示 `.folder-empty-tip`。
 - 管理：`openFolderMenu()`（打开 / 重命名 / 解散 / 删除）、`openFolderItemMenu()`（打开 / 复制 / 编辑 / 移出 / 删除）；`dissolveFolder()` 把站点按原顺序放回分组。
 - 定位工具：`findItemEntry()`（data.js，会进一层文件夹）、`collectGroupUrls()`（含文件夹内网址）、`groupOfFolder()` / `findFolder()`（folder.js）。
 - 数据约束：文件夹里只能是网站（`normalizeItem()` 丢弃嵌套文件夹与组件），因此不存在多层结构。
 - 命名：新建默认叫「文件夹」，同分组内重名时自动加序号（`uniqueFolderTitle()` → 文件夹 / 文件夹 2 / 文件夹 3）。
-- 大文件夹：超过 24 项时面板加 `.folder-wide`（8 列、宽至 680px、单格收窄），由 `.folder-grid` 自身滚动；`renderFolderPanel()` 重绘前后保留 `scrollTop`，删改一项不会跳回顶部。
+- 大文件夹：面板尺寸固定，由 `.folder-grid` 自身滚动（`flex: 1; min-height: 0`）。`renderFolderPanel()` 重绘前后保留 `scrollTop`，删改一项不会跳回顶部；`main.js` 的滚轮拦截已排除 `.folder-mask`，面板内滚动不会穿透成翻页 / 切分组。
 
 ---
 
@@ -345,13 +346,13 @@ Get-ChildItem -Recurse src\js -Filter *.js | ForEach-Object { node --check $_.Fu
 
 # 2) IDE 诊断（在编辑器里对 src 执行 read_lints）
 
-# 3) 冒烟测试（页面内用例，23 项，退出码非 0 即失败）
+# 3) 冒烟测试（页面内用例，29 项，退出码非 0 即失败）
 node tools/smoke/run.js
 ```
 
 `tools/smoke/run.js` 会读 `src/newtab.html`，把 `tools/smoke/cases.js` 内联成 `src/__smoke.html`，用无头 Chrome/Edge 跑一遍并解析 `document.title`，最后删除临时文件（浏览器路径可用环境变量 `CHROME_PATH` 指定）。
 
-**新增用例**：只改 `tools/smoke/cases.js`，在对应分组里追加 `ok('名字', 断言, 失败细节)`；用例只能调用页面已有的全局函数。覆盖范围：文件夹合并 / 磁贴 / 面板 / 毛玻璃、备份往返、一层约束、同步字段白名单与合并、书签 HTML 层级、书签双向同步（内部伪造 `chrome.bookmarks`，不需要真扩展环境）。
+**新增用例**：只改 `tools/smoke/cases.js`，在对应分组里追加 `ok('名字', 断言, 失败细节)`；用例只能调用页面已有的全局函数。覆盖范围：文件夹合并 / 磁贴 / 面板（尺寸、列数、居中、滚轮不穿透、过滤）、备份往返、一层约束、同步字段白名单与合并、书签 HTML 层级、书签双向同步（内部伪造 `chrome.bookmarks`，不需要真扩展环境）。
 
 ---
 
