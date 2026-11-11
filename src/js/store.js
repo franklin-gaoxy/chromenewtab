@@ -120,7 +120,14 @@ const DEFAULT_SETTINGS = {
   perRow: 5,          // 每行图标数量（3 ~ 8）
   align: 'center',    // 网格对齐：center | left | right
   bmWidth: 340,       // 书签侧边栏宽度
-  bmHandlePos: 'center' // 书签按钮在屏幕高度的位置：top | center | bottom
+  bmHandlePos: 'center', // 书签按钮在屏幕高度的位置：top | center | bottom
+  expandedSections: [], // 设置抽屉里被展开的区块（默认全部折叠；值为 section 的 data-section）
+  autoBackupEnabled: false,   // 定时备份开关
+  autoBackupTime: '09:00',    // 每天执行时间 HH:MM
+  autoBackupMode: 'default',  // default（下载目录）| custom（自定义目录）
+  autoBackupDirName: '',      // 自定义目录的显示名
+  autoBackupKeepDays: 7,      // 保留天数，0 表示永久
+  autoBackupLastRun: ''       // 最近一次成功备份的日期 YYYY-MM-DD
 };
 
 /* ---------------- 工具函数 ---------------- */

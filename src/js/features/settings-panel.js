@@ -127,6 +127,59 @@ function buildSettingsPanel() {
 
   syncSettingsUI();
   renderSearchEngine();
+  initCollapsibleSections();
+}
+
+/* ---------------- 设置区块折叠（默认全部折叠，记录被展开的） ---------------- */
+function expandedSections() {
+  return Array.isArray(state.settings.expandedSections) ? state.settings.expandedSections : [];
+}
+
+function syncCollapseUI() {
+  const expanded = new Set(expandedSections());
+  document.querySelectorAll('.drawer-body .setting-block').forEach((sec) => {
+    const isExpanded = expanded.has(sec.dataset.section);
+    sec.classList.toggle('collapsed', !isExpanded);
+    const head = sec.querySelector('h3.collapse-head');
+    if (head) head.setAttribute('aria-expanded', String(isExpanded));
+  });
+}
+
+function initCollapsibleSections() {
+  document.querySelectorAll('.drawer-body .setting-block').forEach((sec) => {
+    const head = sec.querySelector('h3');
+    if (!head || head.classList.contains('collapse-head')) return;
+
+    head.classList.add('collapse-head');
+    head.setAttribute('role', 'button');
+    head.setAttribute('tabindex', '0');
+    head.setAttribute('aria-expanded', 'true');
+
+    const ico = document.createElement('i');
+    ico.className = 'collapse-ico';
+    ico.setAttribute('aria-hidden', 'true');
+    head.appendChild(ico);
+
+    const toggle = () => {
+      const key = sec.dataset.section;
+      const set = new Set(expandedSections());
+      if (set.has(key)) set.delete(key);
+      else set.add(key);
+      state.settings.expandedSections = Array.from(set);
+      save();
+      syncCollapseUI();
+    };
+
+    head.addEventListener('click', toggle);
+    head.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggle();
+      }
+    });
+  });
+
+  syncCollapseUI();
 }
 
 function syncSettingsUI() {
@@ -148,6 +201,7 @@ function syncSettingsUI() {
   });
   $('bgUrl').value = s.customBg && s.customBg.indexOf('data:') !== 0 ? s.customBg : '';
   updateSyncUI();
+  syncAutoBackupUI();
 }
 
 /* ---------------- 事件绑定 ---------------- */

@@ -13,6 +13,7 @@ function bindEvents() {
   bindLinkEvents();
   bindSettingsEvents();
   bindBackupEvents();
+  bindAutoBackupEvents();
   bindSyncEvents();
   bindWidgetEvents();
   bindBookmarkEvents();
@@ -146,6 +147,7 @@ async function init() {
   buildSettingsPanel();
   renderAll();
   bindEvents();
+  initAutoBackup();
 }
 
 init();

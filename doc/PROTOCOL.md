@@ -46,7 +46,7 @@ QSP 用于在**用户自己的服务器**上备份与同步导航数据（分组
 | 字符编码 | UTF-8 |
 | 时间格式 | RFC 3339（UTC），如 `2026-11-06T08:30:00.000Z` |
 | 请求头 `X-QSP-Version` | 客户端声明的协议主版本，值为 `1`。服务端不支持时应返回 `400 UNSUPPORTED_VERSION` |
-| 响应头 `X-QSP-Server` | 服务端实现标识，如 `qihang-sample/1.1.0`，便于排查问题 |
+| 响应头 `X-QSP-Server` | 服务端实现标识，如 `qihang-sample/1.1.1`，便于排查问题 |
 | 请求体大小上限 | **2 MiB**（2097152 字节） |
 | 缓存 | 客户端应使用 `no-store`，服务端应返回 `Cache-Control: no-store` |
 
@@ -218,7 +218,7 @@ GET /api/v1/meta
     "name": "启航示例服务器",
     "protocol": "qsp",
     "protocolVersion": 1,
-    "server": "qihang-sample/1.1.0",
+    "server": "qihang-sample/1.1.1",
     "authScheme": "Bearer",
     "tokenTtlSeconds": 2592000,
     "maxPayloadBytes": 2097152

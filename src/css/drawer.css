@@ -62,6 +62,46 @@
 
 .setting-block { scroll-margin-top: 12px; }
 
+/* 设置区块折叠 */
+.setting-block > h3.collapse-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 2px 0;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.16s var(--ease);
+}
+
+.setting-block > h3.collapse-head:hover { color: var(--text); }
+
+.setting-block > h3.collapse-head:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.45);
+  outline-offset: 2px;
+}
+
+.collapse-ico {
+  flex: none;
+  margin-left: auto;
+  width: 7px;
+  height: 7px;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  transform: rotate(45deg) translate(-1px, -1px);
+  transition: transform 0.2s var(--ease);
+  opacity: 0.75;
+}
+
+.setting-block.collapsed > h3.collapse-head { margin-bottom: 0; }
+
+.setting-block.collapsed > h3.collapse-head .collapse-ico {
+  transform: rotate(-45deg) translate(-1px, -1px);
+}
+
+.setting-block.collapsed > *:not(h3) { display: none; }
+
 .sync-line {
   margin: 0 0 6px;
   font-size: 12.5px;

@@ -1,8 +1,8 @@
 /* 备份导出 / 导入（JSON 与浏览器书签） */
 
 /* ---------------- 数据导入导出 ---------------- */
-function exportData() {
-  const payload = {
+function buildBackupPayload() {
+  return {
     app: 'qihang-nav',
     version: 1,
     exportedAt: new Date().toISOString(),
@@ -10,6 +10,10 @@ function exportData() {
     activeGroupId: state.activeGroupId,
     settings: state.settings
   };
+}
+
+function exportData() {
+  const payload = buildBackupPayload();
   downloadBlob(
     JSON.stringify(payload, null, 2),
     'qihang-nav-' + new Date().toISOString().slice(0, 10) + '.json',

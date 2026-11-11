@@ -18,7 +18,7 @@ const crypto = require('crypto');
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT || 8787);
 const PROTOCOL_VERSION = 1;
-const SERVER_ID = 'qihang-sample/1.1.0';
+const SERVER_ID = 'qihang-sample/1.1.1';
 
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'users.json');

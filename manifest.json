@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "启航 · 新标签页导航",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "把常用网站分组收纳在新标签页，点一下就打开。支持自定义分组、组件（时钟 / AI）、自动获取站点图标、搜索与自定义背景。",
   "minimum_chrome_version": "100",
   "chrome_url_overrides": {
@@ -18,7 +18,7 @@
   "background": {
     "service_worker": "src/js/background.js"
   },
-  "permissions": ["storage", "favicon", "bookmarks"],
+  "permissions": ["storage", "favicon", "bookmarks", "downloads"],
   "optional_host_permissions": ["http://*/*", "https://*/*"],
   "icons": {
     "16": "src/assets/icon16.png",

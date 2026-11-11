@@ -18,8 +18,9 @@
 ├─ README.md                  面向使用者的说明：功能、安装、操作流程、权限、FAQ
 ├─ LICENSE                    MIT 开源协议（个人与商用均免费，分发须保留）
 ├─ AGENTS.md                  仓库内 AI 协作约定（指向 doc/）
+├─ .github/workflows/         CI：推送 v* 标签发布正式版；推送 main/develop 更新分支快照包
 ├─ dist/                      本地打包产物 zip（不入版本控制，仅作 Release 资产；清单见 doc/BACKUP-MANIFEST.md）
-├─ doc/                       文档（本文件、AI-GUIDE、协议、备份清单）
+├─ doc/                       文档（本文件、AI-GUIDE、协议、备份清单、升级指南）
 ├─ server/                    QSP v1 示例服务端（Node，无依赖）
 ├─ tools/
 │  ├─ gen_assets.py           生成图标与矢量背景，输出到 src/assets
@@ -62,7 +63,8 @@
       │  ├─ modal.js          openModal/closeModal/openSettingsPanel + 通用关闭绑定
       │  ├─ link-modal.js     站点编辑弹窗与表单校验
       │  ├─ settings-panel.js 设置抽屉内容构建（引擎/背景/行为/布局/同步/备份）与回显
-      │  ├─ backup.js         JSON 导出导入、浏览器书签导出（HTML 文件）
+      │  ├─ backup.js         JSON 导出导入（buildBackupPayload / exportData / importData）、浏览器书签导出（HTML 文件）
+      │  ├─ auto-backup.js    定时备份：到点检测、全量导出、默认下载目录或自定义目录（File System Access）、按天清理
       │  ├─ sync.js           远程同步 QSP v1 + 协议文档链接
       │  ├─ bookmarks.js      书签侧边栏：悬浮按钮、书签树、模糊搜索、宽度拖拽
       │  └─ bookmark-sync.js  书签 ↔ 主页双向同步（导入 / 导出、两种遍历模式）
@@ -80,7 +82,7 @@
 
 **加载顺序（`src/newtab.html` 必须与之一致）**
 `store.js` → `core/*` → `features/*` → `widgets/registry.js` → `widgets/picker.js` → `widgets/clock.js` → `widgets/ai/*` → `main.js`。
-features 内部：`bookmarks.js` 早于 `bookmark-sync.js`（后者复用前者的面板与 `bmLoadTree()`）；`folder.js` 紧跟在 `grid.js` 之后（`grid.js` 渲染时调用 `createFolderTile()` / `refreshOpenFolder()`，拖拽落点调用 `canMergeItems()` / `mergeItems()`）。
+features 内部：`bookmarks.js` 早于 `bookmark-sync.js`（后者复用前者的面板与 `bmLoadTree()`）；`folder.js` 紧跟在 `grid.js` 之后（`grid.js` 渲染时调用 `createFolderTile()` / `refreshOpenFolder()`，拖拽落点调用 `canMergeItems()` / `mergeItems()`）；`auto-backup.js` 跟在 `backup.js` 之后（复用 `buildBackupPayload()` 与 `downloadBlob()`）。
 原因：`WidgetRegistry` 是 `const`，各组件文件在顶层立即调用 `register`，因此必须在 registry 之后；`main.js` 最后执行 `init()`。
 
 ---
@@ -109,10 +111,19 @@ state = {
     perRow: 5,             // 每行图标数 3~8
     align: 'center',       // center | left | right
     bmWidth: 340,          // 书签侧边栏宽度（拖拽后写回）
-    bmHandlePos: 'center'  // 书签悬浮按钮位置：top | center | bottom
+    bmHandlePos: 'center', // 书签悬浮按钮位置：top | center | bottom
+    expandedSections: [], // 设置抽屉里被展开的区块 key（data-section）；默认为空 = 全部折叠
+    autoBackupEnabled: false,  // 定时备份开关
+    autoBackupTime: '09:00',   // 每天执行时间 HH:MM
+    autoBackupMode: 'default', // default（下载目录）| custom（自定义目录）
+    autoBackupDirName: '',     // 自定义目录显示名
+    autoBackupKeepDays: 7,     // 保留天数，0 = 永久
+    autoBackupLastRun: ''      // 最近成功备份日期 YYYY-MM-DD
   }
 }
 ```
+
+> 自定义目录的 `FileSystemDirectoryHandle` 不存在 `settings` 里（不可序列化），而是放在 IndexedDB `qihang-auto-backup` 的 `handles` store，键 `backup-dir`。浏览器重启后 `queryPermission` 可能变回 `prompt`，此时需在设置里点「重新授权目录」。
 
 `Item` 有三种形态，靠 `kind` 区分：
 
@@ -212,6 +223,18 @@ aiData = {
 - 命名：新建默认叫「文件夹」，同分组内重名时自动加序号（`uniqueFolderTitle()` → 文件夹 / 文件夹 2 / 文件夹 3）。
 - 大文件夹：面板尺寸固定，由 `.folder-grid` 自身滚动（`flex: 1; min-height: 0`）。`renderFolderPanel()` 重绘前后保留 `scrollTop`，删改一项不会跳回顶部；`main.js` 的滚轮拦截已排除 `.folder-mask`，面板内滚动不会穿透成翻页 / 切分组。
 
+### 3.9 定时备份
+入口：设置 → 备份与恢复 → 定时备份（`auto-backup.js`）。
+
+- 到期判断：`autoBackupDue(now)` —— 未启用直接 false；`now` 早于当天 `autoBackupTime` 返回 false；`settings.autoBackupLastRun` 已是当天则返回 false（当天最多补一次）。
+- 触发时机：`initAutoBackup()`（`main.js` 的 `init()` 末尾）先查一次，之后每 60 秒 `checkAutoBackup()` 一次，窗口 `focus` 时再查一次。**不依赖 `chrome.alarms`，页面没打开就不备份，下次打开补做。**
+- 执行：`runAutoBackup(manual)` 用 `buildBackupPayload()` 生成与「导出备份」完全一致的全量 JSON：
+  - `default` 模式 → `chrome.downloads.download()` 写 `下载目录/qihang-backup/qihang-nav-YYYY-MM-DD.json`（`conflictAction: 'overwrite'`，同日重复备份只保留一份），随后 `autoBackupCleanupDownloads()` 用 `downloads.search({})` 过滤 `qihang-backup/` 下的备份，超期项 `removeFile()` 删磁盘文件再 `erase()` 清记录（依赖下载记录存在，用户手动清过记录则不处理）
+  - `custom` 模式 → 从 IndexedDB 取目录句柄 → `queryPermission('readwrite')` 必须为 `granted` → `getFileHandle(name, { create: true })` + `createWritable()` 写入 → `autoBackupCleanup()` 按 `autoBackupKeepDays` 遍历 `handle.values()` 删除过期文件（`keepDays <= 0` 不删）
+- 默认模式下的 `chrome.downloads` 相关能力需要 `manifest.json` 的 `downloads` 权限；「打开下载目录」走 `downloads.showDefaultFolder()`，仅默认模式显示，自定义模式改为显示「重新授权目录」。
+- 恢复：不新增路径，直接用同一区块的「导入备份」读取该 JSON（`importData()` → `normalizeData()`）。
+- 失败处理：非手动触发只更新 `#autoBackupStatus` 文本，不打扰；手动触发额外 `toast()`。权限失效时提示点「重新授权目录」（`autoBackupPickDir()` 重新走 `showDirectoryPicker`）。
+
 ---
 
 ## 4. 扩展点
@@ -250,6 +273,8 @@ WidgetRegistry.register({
 3. `src/js/features/settings-panel.js`：`buildSettingsPanel()`（绑定）+ `syncSettingsUI()`（回显）
 4. `src/js/features/preferences.js` 的 `applySettings()`（如需即时生效）
 
+> 若字段属于自带 UI 的独立模块（如 `auto-backup.js`），绑定与回显写在模块内（`bindAutoBackupEvents()` / `syncAutoBackupUI()`），再分别在 `main.js` 的 `bindEvents()` 与 `settings-panel.js` 的 `syncSettingsUI()` 里挂一行。
+
 ### 4.3 新增右键菜单项
 `src/js/features/menu.js` 的 `openCanvasMenu()`（空白处）或 `openItemMenu()` / `openGroupMenu()`。
 
@@ -279,7 +304,7 @@ WidgetRegistry.register({
 | `store.js` `defaultData()` | 首次安装的默认数据 |
 | `features/sync.js` `buildSyncPayload()` | 上传字段白名单（漏了会被同步丢弃） |
 | `features/sync.js` `mergeGroups()` | 合并时的字段重建规则 |
-| `features/backup.js` `exportData()` | 直接序列化 `state`，一般无需改（文件夹天然带结构） |
+| `features/backup.js` `buildBackupPayload()` | 手动导出与定时备份共用的全量载荷，改备份字段只改这里 |
 | `features/backup.js` `buildBookmarksHtml()` | 导出书签 HTML 的层级（分组 / 文件夹各一层） |
 | `features/grid.js` `createTile()` / `createWidgetTile()` / `createFolderTile()` | 渲染与交互 |
 | `features/grid.js` `visibleList()` | 搜索匹配字段（文件夹内的站点也参与匹配） |
@@ -346,13 +371,13 @@ Get-ChildItem -Recurse src\js -Filter *.js | ForEach-Object { node --check $_.Fu
 
 # 2) IDE 诊断（在编辑器里对 src 执行 read_lints）
 
-# 3) 冒烟测试（页面内用例，34 项，退出码非 0 即失败）
+# 3) 冒烟测试（页面内用例，42 项，退出码非 0 即失败）
 node tools/smoke/run.js
 ```
 
 `tools/smoke/run.js` 会读 `src/newtab.html`，把 `tools/smoke/cases.js` 内联成 `src/__smoke.html`，用无头 Chrome/Edge 跑一遍并解析 `document.title`，最后删除临时文件（浏览器路径可用环境变量 `CHROME_PATH` 指定）。
 
-**新增用例**：只改 `tools/smoke/cases.js`，在对应分组里追加 `ok('名字', 断言, 失败细节)`；用例只能调用页面已有的全局函数。覆盖范围：文件夹合并 / 磁贴 / 面板（尺寸、列数、居中、滚轮不穿透、过滤）、备份往返、一层约束、同步字段白名单与合并、书签 HTML 层级、书签双向同步（内部伪造 `chrome.bookmarks`，不需要真扩展环境）。
+**新增用例**：只改 `tools/smoke/cases.js`，在对应分组里追加 `ok('名字', 断言, 失败细节)`；用例只能调用页面已有的全局函数。覆盖范围：文件夹合并 / 磁贴 / 面板（尺寸、列数、居中、滚轮不穿透、过滤）、备份往返、一层约束、同步字段白名单与合并、书签 HTML 层级、书签双向同步（内部伪造 `chrome.bookmarks`，不需要真扩展环境）、设置区块折叠、定时备份到期判断（到点 / 当天只补一次 / 未到点 / 未启用）。
 
 ---
 
@@ -366,3 +391,20 @@ node tools/smoke/run.js
 | `doc/AI-GUIDE.md` | 给 AI / 新协作者的提示词与工作流程 |
 | `doc/PROTOCOL.md` | QSP v1 同步协议规范（服务端对接依据） |
 | `doc/BACKUP-MANIFEST.md` | 备份包内容与工程路径对应关系 |
+| `doc/UPGRADE.md` | 版本升级与数据保留方案：存储位置、迁移机制、1.0.0 → 1.1.x 步骤、回滚、丢数据风险 |
+
+---
+
+## 9. 发布流程
+
+由 `.github/workflows/release.yml` 驱动，不再手工打包上传：
+
+| 触发 | Release tag | 资产 | 行为 |
+| --- | --- | --- | --- |
+| 推送 `v*` 标签 | 与标签同名（如 `v1.1.1`） | `qihang-nav-1.1.1.zip` | 先校验标签与 `manifest.json` 的 `version` 一致，再创建 Release；已存在则覆盖同名资产 |
+| 推送 `main` | `main-latest` | `qihang-nav-main.zip` | 每次覆盖资产并更新说明，`<branch>-latest` 标签同步移动到最新提交 |
+| 推送 `develop` | `develop-latest` | `qihang-nav-develop.zip` | 同上，并标记为 pre-release |
+
+打包范围固定为 `manifest.json README.md LICENSE src doc server tools`，排除 `dist/`、`__pycache__`、`*.pyc`、`*.log`、`.DS_Store`，条目名统一用 `/`。
+
+`dist/` 不入版本控制，仅本地需要时手工打包（写法见 `doc/BACKUP-MANIFEST.md`）。升级与数据保留见 [`UPGRADE.md`](UPGRADE.md)。

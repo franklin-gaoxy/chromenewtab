@@ -330,6 +330,55 @@ function runSmokeTests() {
         pointerDown(document.body);
         ok('bm-autoclose', bmPanel.hidden);
 
+        /* ---------------- 设置区块折叠（默认折叠） ---------------- */
+        const autoHeads = document.querySelectorAll('.drawer-body h3.collapse-head');
+        ok('settings-collapse-auto', autoHeads.length === 6, 'n=' + autoHeads.length);
+
+        initCollapsibleSections();
+        const dataSection = document.querySelector('.setting-block[data-section="data"]');
+        const dataHead = dataSection.querySelector('h3.collapse-head');
+        ok('settings-collapse-default', dataSection.classList.contains('collapsed'));
+
+        dataHead.click();
+        ok(
+          'settings-expand',
+          !dataSection.classList.contains('collapsed') &&
+            state.settings.expandedSections.indexOf('data') >= 0
+        );
+
+        dataHead.click();
+        ok(
+          'settings-collapse',
+          dataSection.classList.contains('collapsed') &&
+            state.settings.expandedSections.indexOf('data') < 0
+        );
+
+        /* ---------------- 定时备份：到期判断 ---------------- */
+        const keepEnabled = state.settings.autoBackupEnabled;
+        const keepTime = state.settings.autoBackupTime;
+        const keepLastRun = state.settings.autoBackupLastRun;
+
+        state.settings.autoBackupEnabled = true;
+        state.settings.autoBackupTime = '00:00';
+        state.settings.autoBackupLastRun = '';
+        ok('auto-backup-due', autoBackupDue(new Date()) === true);
+
+        state.settings.autoBackupLastRun = autoBackupDateKey(new Date());
+        ok('auto-backup-once-a-day', autoBackupDue(new Date()) === false);
+
+        state.settings.autoBackupTime = '23:59';
+        state.settings.autoBackupLastRun = '';
+        const midnight = new Date();
+        midnight.setHours(0, 0, 0, 0);
+        ok('auto-backup-before-time', autoBackupDue(midnight) === false);
+
+        state.settings.autoBackupEnabled = false;
+        ok('auto-backup-disabled', autoBackupDue(new Date()) === false);
+
+        state.settings.autoBackupEnabled = keepEnabled;
+        state.settings.autoBackupTime = keepTime;
+        state.settings.autoBackupLastRun = keepLastRun;
+
         done();
       })
       .catch((err) => {

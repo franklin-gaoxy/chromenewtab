@@ -16,7 +16,7 @@
 
 - 技术栈：原生 HTML / CSS / JavaScript（Manifest V3），**无框架、无构建、无第三方依赖**
 - 浏览器：Chrome / Edge 等 Chromium 内核浏览器（Chrome 100+）
-- 安装方式：从 [Releases](https://github.com/franklin-gaoxy/chromenewtab/releases/latest) 下载 `qihang-nav-1.1.0.zip` → 解压 → 「加载已解压的扩展程序」（见[安装](#二安装三步)）
+- 安装方式：从 [Releases](https://github.com/franklin-gaoxy/chromenewtab/releases/latest) 下载 `qihang-nav-1.1.1.zip` → 解压 → 「加载已解压的扩展程序」（见[安装](#二安装三步)）
 
 ---
 
@@ -77,7 +77,9 @@
 ### 7. 外观与数据
 - 内置多套背景（雾林、矢量雾林等），也可粘贴图片链接或上传本地图片
 - 可关闭图标下方名称
+- **设置分组默认收起**：点击小标题展开 / 收起，展开过的区块会记住状态
 - **备份与恢复**：导出 / 导入 JSON（含分组、站点、设置）
+- **定时备份**：每天指定时间自动全量备份一次；保存位置可选「下载目录/qihang-backup」或自选文件夹，两种位置都会按保留天数自动清理过期备份。打开新标签页时才检查，错过当天的会在下次打开时补做
 - **导出浏览器书签**：生成 Netscape 书签 HTML，可导入 Chrome 书签管理器
 - **远程同步（可选）**：自建 QSP v1 服务端后可在多台设备间上传、下载、合并，协议见 `doc/PROTOCOL.md`，仓库内 `server/` 提供零依赖示例服务端
 
@@ -87,9 +89,9 @@
 
 发布包只通过 **Release 资产**分发（源码仓库内不含 zip，打包由发布流程生成）：
 
-- **下载地址**：[Releases · v1.1.0](https://github.com/franklin-gaoxy/chromenewtab/releases/tag/v1.1.0) → 点 `qihang-nav-1.1.0.zip`
+- **下载地址**：[Releases · v1.1.1](https://github.com/franklin-gaoxy/chromenewtab/releases/tag/v1.1.1) → 点 `qihang-nav-1.1.1.zip`
 
-1. **下载** `qihang-nav-1.1.0.zip`
+1. **下载** `qihang-nav-1.1.1.zip`
 2. **解压**到任意**固定位置**，例如 `D:\Extensions\qihang-nav`
    - 解压后的根目录里应能直接看到 `manifest.json` 和 `src/` 文件夹
    - 请保留该文件夹，浏览器加载的是解压后的目录，而不是 zip 本身
@@ -189,6 +191,7 @@
 | `storage` | 保存分组、站点、设置与会话数据（本机） |
 | `favicon` | 读取站点图标用于图标网格 |
 | `bookmarks` | 书签侧边栏展示与「书签 ↔ 主页」同步 |
+| `downloads` | 定时备份写入默认下载目录（`下载/qihang-backup/`）、清理过期备份、打开下载目录 |
 | `optional_host_permissions` | AI 请求外部接口时临时申请该域名权限 |
 
 扩展不收集任何数据：导航数据只存在本机；AI 请求直接发往你自己配置的接口；远程同步只发送到你自己的服务器。
@@ -206,7 +209,9 @@
 │  ├─ ARCHITECTURE.md     代码地图、数据模型、扩展点（改代码前先读）
 │  ├─ AI-GUIDE.md         AI / 协作者工作流与快速定位表
 │  ├─ PROTOCOL.md         QSP v1 远程同步协议
-│  └─ BACKUP-MANIFEST.md  发布包内容清单
+│  ├─ BACKUP-MANIFEST.md  发布包内容清单
+│  └─ UPGRADE.md          版本升级与数据保留方案
+├─ .github/workflows/     CI：打标签或推送分支时自动打包发布
 ├─ server/                QSP v1 示例服务端（Node，零依赖）
 ├─ tools/gen_assets.py    生成图标与矢量背景
 └─ dist/                  本地打包产物（zip，不入版本控制）
@@ -222,22 +227,37 @@
 # 语法检查所有脚本
 Get-ChildItem -Recurse src\js -Filter *.js | ForEach-Object { node --check $_.FullName }
 
-# 页面冒烟（34 项：文件夹、命名、面板、过滤、备份、同步、书签互转、侧边栏收起；退出码非 0 即失败）
+# 页面冒烟（42 项：文件夹、命名、面板、过滤、备份、同步、书签互转、侧边栏收起、设置折叠、定时备份；退出码非 0 即失败）
 node tools/smoke/run.js
 ```
 
 冒烟用例在 `tools/smoke/cases.js`，运行器 `tools/smoke/run.js` 会自动起无头 Chrome/Edge，浏览器路径可用环境变量 `CHROME_PATH` 指定。加新功能时在 `cases.js` 追加一行 `ok('名字', 断言)` 即可。
 
-重新打包：
+发布（自动，推荐）：
+
+```powershell
+# 1) 先把版本号改到 manifest.json（页脚、README 等一并同步）
+# 2) 打标签并推送，CI 自动打包上传到 Release 页面
+git tag -a v1.1.1 -m "qihang-nav v1.1.1"
+git push origin v1.1.1
+```
+
+- 推送 `v*` 标签 → 创建/更新 `v1.1.1` Release，资产 `qihang-nav-1.1.1.zip`
+- 推送 `main` / `develop` → 更新 `main-latest` / `develop-latest` 的分支快照包（`qihang-nav-main.zip` / `qihang-nav-develop.zip`）
+- CI 会校验标签与 `manifest.json` 版本是否一致，不一致直接失败
+
+本地手工打包（备用）：
 
 ```powershell
 Compress-Archive -Path manifest.json,README.md,LICENSE,src,doc,server,tools `
-  -DestinationPath dist/qihang-nav-1.1.0.zip -Force
+  -DestinationPath dist/qihang-nav-1.1.1.zip -Force
 ```
 
 > 打包不含顶层文件夹：解压后的目录即扩展根目录（含 `manifest.json` 与 `src/`）。
 > 生成的 zip 已被 `.gitignore` 忽略，**只作为 GitHub Release 资产上传，不提交到源码仓库**。
 > 跨平台分发请用 [`doc/BACKUP-MANIFEST.md`](doc/BACKUP-MANIFEST.md) 第 6 节的写法（条目名用 `/`）；Windows PowerShell 5.1 的 `Compress-Archive` 会写成 `\`。
+
+升级到新版本（不丢数据）：见 [`doc/UPGRADE.md`](doc/UPGRADE.md) —— 核心是**保持扩展目录不变、覆盖文件后点「重新加载」**，不要「移除」扩展。
 
 示例服务端（可选，用于远程同步）：
 
