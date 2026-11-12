@@ -55,7 +55,7 @@
       │  ├─ data.js           groupById、currentGroup、totalItems、save（防抖持久化）
       │  └─ media.js          本地图片读取与压缩（背景 / 图标）
       ├─ features/
-      │  ├─ preferences.js    主题与布局：backgroundImageFor、applySettings、perRow、perPage、applyGridLayout
+      │  ├─ preferences.js    主题与布局：backgroundImageFor、applySettings、perRow、perPage、applyGridLayout（含 iconSize/labelSize 变量）
       │  ├─ rail.js           分组栏渲染、选择、重命名、新建
       │  ├─ search.js         搜索分类、引擎切换、doSearch
       │  ├─ grid.js           可见列表、分页、磁贴、拖拽排序/合并落点、renderAll
@@ -109,6 +109,9 @@ state = {
     customBg: '',          // 自定义背景（URL 或 dataURL）
     openInNewTab: true,
     showLabels: true,
+    iconFrame: true,       // 图标是否使用统一底色 + 边框（false = 按原始形状铺满）
+    iconSize: 60,          // 图标边长 px 40~88（默认 60，写进 body 的 --tile-icon-* 变量）
+    labelSize: 12.5,       // 磁贴名称字号 px 10~18（默认 12.5，写进 --tile-name-size）
     perRow: 8,             // 每行图标数 3~8（默认 8）
     align: 'center',       // center | left | right
     bmWidth: 340,          // 书签侧边栏宽度（拖拽后写回）
@@ -236,6 +239,19 @@ aiData = {
 - 恢复：不新增路径，直接用同一区块的「导入备份」读取该 JSON（`importData()` → `normalizeData()`）。
 - 失败处理：非手动触发只更新 `#autoBackupStatus` 文本，不打扰；手动触发额外 `toast()`。权限失效时提示点「重新授权目录」（`autoBackupPickDir()` 重新走 `showDirectoryPicker`）。
 
+### 3.10 站点图标
+- 渲染：`paintIcon()`（grid.js）优先 `item.icon`（用户手动选过的），否则 Chrome 本地 `faviconUrl(url, 128)` 先顶上，再由 `resolveIcon(item)` 异步解析高清源替换；「纯色底 + 首字」只在确实拿不到图（所有候选失败 / 自定义地址 404）时才出现，正常加载路径不会先闪文字。文件夹面板（`buildFolderGrid()`）复用同一函数与缓存。
+- 候选：`iconCandidateList(url)`（store.js）按「高清优先」给出 10 个来源 —— `favicon.im`（主域 → 根域，抓 apple-touch-icon）、`icon.horse`（根域 → 主域）、Clearbit logo、Google `s2?sz=256`、DuckDuckGo、站点根 `favicon.ico`、Chrome `_favicon`；子域站点靠 `rootDomainOf()` 回退根域（`xxx.feishu.cn` → `feishu.cn`）。
+- 解析：`resolveIcon()` 串行试候选（每张 2.5s 超时），按 `naturalWidth` 分档 —— ≥96px 直接采用、≥48px 记为备选、都不达标则回退第一张可用图；`isPlaceholderIcon()` 丢弃 1x1 像素与 `favicon.im` 的「灰底字母」占位 SVG（150×150）。进行中的任务进 `iconJobs` 去重。
+- 缓存：成功结果由 `rememberIcon()` 写入 `iconSrcCache`（内存）并持久化到 localStorage `qihang:icon-cache`（`{host: {src, ts}}`，TTL 7 天、上限 400 条，`loadIconCache()` 在脚本初始化时同步读回）。`paintIcon()` 命中缓存时直接 append `<img>`；图片 `error` 时 `forgetIcon()` 清缓存并重走解析。
+- 圆角：`.tile-icon img` / `.f-item-icon img` 统一 `border-radius: 22%`，方形 favicon 也会被修成圆角；`body[data-icon-frame='off']` 时只去掉底板 / 边框 / 投影并放大到 `--tile-icon-size`。
+- 弹窗候选：`renderIconCandidates()`（link-modal.js）取候选前 6 个渲染成 `.icon-candidate` 方块，`onerror` 与小于 8px 的占位图自动移除，点击写入 `#fIcon`；`updateIconPreview()` 直接复用 `resolveIcon()`，预览不会出现占位图。
+- 文字图标（用户自选）：编辑弹窗「文字图标」按钮展开 `#letterIconPanel`，输入 1~6 个字后由 `letterIconDataUrl(text, color)`（store.js）生成 SVG data URL —— 1~3 字单行、4 字 2+2、5 字 3+2、6 字 3+3，字号按最长行保守取值不出界；底色可选 8 个预设色块或直接填色号（`normalizeHexColor()` 归一化 `#abc` / `#aabbcc`），不选则按文字哈希取色，「换色」随机色相。生成结果只存 `letterIconValue` 变量（不往输入框里塞长地址），保存时写进 `item.icon`；再次编辑由 `letterIconSource()` 反解文字与底色回显，点「自动获取」清空恢复自动。
+- 文字图标显示：`item.icon` 是 `data:image/svg+xml` 时 `paintIcon()` 给容器加 `letter-tile`，图片按 `--tile-icon-size * 0.86` 铺开（`grid.css` / `folder.css`），多行小字才看得清；关闭统一底色时仍按底板满铺。
+- 刷新时机：URL 输入后 420ms 防抖（`scheduleIconCandidates()`）；打开弹窗立即渲染一次；`#fIcon` 变化只调 `syncCandidateActive()` 切选中态，不重建节点。
+- 保存：只有用户手动点选候选才会写进 `item.icon`；没选就存空字符串走自动获取，站点换 logo 能自动跟上。`isInternalFaviconUrl()` 用于剔除 Chrome `_favicon` 地址（换扩展 ID / 换浏览器就失效），不会因此产生脏数据。
+- 失败处理：`item.icon` 加载失败只显示「纯色底 + 首字」占位，不自动换源、不改数据，等用户自己在编辑弹窗里调整。
+
 ---
 
 ## 4. 扩展点
@@ -331,7 +347,7 @@ WidgetRegistry.register({
 | `features/rail.js` `renderSidebar()` | `g.items.length` | 只影响「N 个站点」数字 |
 | `features/grid.js` `renderGrid()` | `kind` 分派磁贴工厂 | ★ 加一路渲染 |
 | `features/grid.js` `visibleList()` | `title/url`（文件夹内站点也匹配） | ★ 容器要参与搜索展开 |
-| `features/grid.js` `paintIcon()` | `icon/url/title` | 一般不用改 |
+| `features/grid.js` `paintIcon()` | `icon/url/title` | 图标尺寸与回退逻辑在这里（见 3.10） |
 | `features/grid.js` `createTile()` | `url`→打开、`title` | 站点专用 |
 | `features/grid.js` `attachTileDrag()` / `dropZone()` | `kind/id`（合并判定） | ★ 决定新类型能否合并 / 拖拽 |
 | `features/folder.js` `canMergeItems()` | `kind` | ★ 组件在此被排除 |

@@ -81,6 +81,7 @@
   width: var(--tile-icon-img, 34px);
   height: var(--tile-icon-img, 34px);
   object-fit: contain;
+  border-radius: 22%;
   image-rendering: -webkit-optimize-contrast;
 }
 
@@ -88,6 +89,27 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* 关闭统一底色：站点图标按原始形状铺满（文件夹 / 组件 / 添加磁贴不受影响） */
+body[data-icon-frame='off'] .tile:not(.add):not(.tile-folder):not(.widget-tile) .tile-icon {
+  background: none;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  overflow: visible;
+}
+
+body[data-icon-frame='off'] .tile:not(.add):not(.tile-folder):not(.widget-tile) .tile-icon img {
+  width: var(--tile-icon-size, 60px);
+  height: var(--tile-icon-size, 60px);
+  object-fit: contain;
+}
+
+/* 文字图标（用户自选 SVG）按底板宽度铺开，避免多行小字看不清 */
+.tile-icon.letter-tile img {
+  width: calc(var(--tile-icon-size, 60px) * 0.86);
+  height: calc(var(--tile-icon-size, 60px) * 0.86);
 }
 
 .tile-icon .letter {
@@ -100,7 +122,7 @@
 
 .tile-name {
   max-width: 98px;
-  font-size: 12.5px;
+  font-size: var(--tile-name-size, 12.5px);
   line-height: 1.35;
   color: #fff;
   text-align: center;

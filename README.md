@@ -20,7 +20,7 @@
 
 - 技术栈：原生 HTML / CSS / JavaScript（Manifest V3），**无框架、无构建、无第三方依赖**
 - 浏览器：Chrome / Edge 等 Chromium 内核浏览器（Chrome 100+）
-- 安装方式：从 [Releases](https://github.com/franklin-gaoxy/chromenewtab/releases/latest) 下载 `qihang-nav-1.1.1.zip` → 解压 → 「加载已解压的扩展程序」（见[安装](#二安装三步)）
+- 安装方式：从 [Releases](https://github.com/franklin-gaoxy/chromenewtab/releases/latest) 下载 `qihang-nav-1.2.0.zip` → 解压 → 「加载已解压的扩展程序」（见[安装](#二安装三步)）
 
 ---
 
@@ -93,9 +93,9 @@
 
 发布包只通过 **Release 资产**分发（源码仓库内不含 zip，打包由发布流程生成）：
 
-- **下载地址**：[Releases · v1.1.1](https://github.com/franklin-gaoxy/chromenewtab/releases/tag/v1.1.1) → 点 `qihang-nav-1.1.1.zip`
+- **下载地址**：[Releases · v1.2.0](https://github.com/franklin-gaoxy/chromenewtab/releases/tag/v1.2.0) → 点 `qihang-nav-1.2.0.zip`
 
-1. **下载** `qihang-nav-1.1.1.zip`
+1. **下载** `qihang-nav-1.2.0.zip`
 2. **解压**到任意**固定位置**，例如 `D:\Extensions\qihang-nav`
    - 解压后的根目录里应能直接看到 `manifest.json` 和 `src/` 文件夹
    - 请保留该文件夹，浏览器加载的是解压后的目录，而不是 zip 本身
@@ -121,7 +121,7 @@
 
 ### 第一次使用
 
-1. **添加网站**：在新标签页空白处右键 →「添加网站」，填写名称与网址（可只填 `juejin.cn`），图标留空会自动获取
+1. **添加网站**：在新标签页空白处右键 →「添加网站」，填写名称与网址（可只填 `juejin.cn`）。图标留空会自动获取，弹窗里还会列出多个在线图标候选（不同来源 / 不同清晰度），点一下即可替换，也可以上传本地图片
 2. **新建分组**：右键 →「新建分组」，或点左侧分组栏底部的「+」
 3. **整理图标**：按住图标拖动排序；把图标拖到左侧分组图标上即可移动到该分组
 4. **调整布局**：右键 →「设置」→「布局」，设置每行图标数量、对齐方式、书签按钮位置
@@ -248,11 +248,11 @@ node tools/screenshot.js
 ```powershell
 # 1) 先把版本号改到 manifest.json（页脚、README 等一并同步）
 # 2) 打标签并推送，CI 自动打包上传到 Release 页面
-git tag -a v1.1.1 -m "qihang-nav v1.1.1"
-git push origin v1.1.1
+git tag -a v1.2.0 -m "qihang-nav v1.2.0"
+git push origin v1.2.0
 ```
 
-- 推送 `v*` 标签 → 创建/更新 `v1.1.1` Release，资产 `qihang-nav-1.1.1.zip`
+- 推送 `v*` 标签 → 创建/更新 `v1.2.0` Release，资产 `qihang-nav-1.2.0.zip`
 - 推送 `main` / `develop` → 更新 `main-latest` / `develop-latest` 的分支快照包（`qihang-nav-main.zip` / `qihang-nav-develop.zip`）
 - CI 会校验标签与 `manifest.json` 版本是否一致，不一致直接失败
 
@@ -260,7 +260,7 @@ git push origin v1.1.1
 
 ```powershell
 Compress-Archive -Path manifest.json,README.md,LICENSE,src,doc,server,tools `
-  -DestinationPath dist/qihang-nav-1.1.1.zip -Force
+  -DestinationPath dist/qihang-nav-1.2.0.zip -Force
 ```
 
 > 打包不含顶层文件夹：解压后的目录即扩展根目录（含 `manifest.json` 与 `src/`）。
@@ -287,8 +287,20 @@ node server.js
 **Q：AI 提示「未授权访问该接口地址」？**
 首次请求需要允许该域名权限，请在弹出的浏览器提示中选择允许；若已拒绝，可到扩展详情页的「网站访问权限」中重新开启。
 
-**Q：图标显示成首字母方块？**
-该站点没有可用的 favicon，或图标地址失效。可右键 →「编辑」→ 手动填写图标地址或上传图片。
+**Q：图标显示成首字母方块？或图标很模糊？**
+该站点没有可用的 favicon，或图标地址失效。右键 →「编辑」，弹窗下方会列出在线图标候选（`favicon.im`、Google、Clearbit、DuckDuckGo、站点根目录 favicon、Chrome 内置）。
+
+- 模糊通常是站点只提供 16×16 的小图标，选候选里更清晰的那个（多为 `favicon.im` 抓到的 apple-touch-icon）
+- 候选里没有合适的，可以手动粘贴图标地址，或「上传图片」用本地图片
+- 一个都加载不出来时，会退化为首字母色块
+
+**Q：新标签页底部有一条灰色的「启航 · 新标签页导航」栏，能去掉吗？**
+这条栏不是扩展画的，而是 **Chrome 138 及以后自带的新标签页页脚**：当新标签页由扩展接管时，Chrome 会在底部显示扩展名和「自定义 Chrome」入口，扩展代码无法移除它。关闭方法：
+
+- 在这条灰栏上 **右键 →「隐藏页脚」**（英文界面为 Hide footer）；
+- 或点右下角「自定义 Chrome」，在面板里关掉「**在新标签页上显示页脚**」（Show footer on New tab page）。
+
+关掉不影响扩展的任何功能。
 
 **Q：修改代码后没有生效？**
 在扩展管理页点击「重新加载」，然后刷新新标签页；修改 `manifest.json` 后必须重新加载。

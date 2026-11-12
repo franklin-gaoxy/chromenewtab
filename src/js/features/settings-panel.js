@@ -72,6 +72,39 @@ function buildSettingsPanel() {
     applySettings();
   });
 
+  const optIconFrame = $('optIconFrame');
+  optIconFrame.addEventListener('change', () => {
+    state.settings.iconFrame = optIconFrame.checked;
+    save();
+    applySettings();
+  });
+
+  // 图标大小 / 名称字号：拖动即时预览，松手落盘
+  const optIconSize = $('optIconSize');
+  const optLabelSize = $('optLabelSize');
+  const syncSizeVals = () => {
+    $('optIconSizeVal').textContent = iconSize() + 'px';
+    $('optLabelSizeVal').textContent = labelSize() + 'px';
+  };
+  optIconSize.addEventListener('input', () => {
+    state.settings.iconSize = Number(optIconSize.value);
+    applySettings();
+    syncSizeVals();
+  });
+  optIconSize.addEventListener('change', () => {
+    save();
+    syncSizeVals();
+  });
+  optLabelSize.addEventListener('input', () => {
+    state.settings.labelSize = Number(optLabelSize.value);
+    applySettings();
+    syncSizeVals();
+  });
+  optLabelSize.addEventListener('change', () => {
+    save();
+    syncSizeVals();
+  });
+
   const optPerRow = $('optPerRow');
   optPerRow.addEventListener('change', () => {
     const n = Math.min(8, Math.max(3, Math.round(Number(optPerRow.value)) || 8));
@@ -192,7 +225,12 @@ function syncSettingsUI() {
   });
   $('optNewTab').checked = s.openInNewTab;
   $('optLabels').checked = s.showLabels;
+  $('optIconFrame').checked = s.iconFrame !== false;
   $('optPerRow').value = perRow();
+  $('optIconSize').value = String(iconSize());
+  $('optLabelSize').value = String(labelSize());
+  $('optIconSizeVal').textContent = iconSize() + 'px';
+  $('optLabelSizeVal').textContent = labelSize() + 'px';
   document.querySelectorAll('#alignChips .chip').forEach((chip) => {
     chip.classList.toggle('active', chip.dataset.align === (s.align || 'center'));
   });

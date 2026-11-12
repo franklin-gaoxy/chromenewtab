@@ -111,11 +111,23 @@
             <div class="icon-tools-line">
               <button type="button" class="mini-btn primary" id="iconAuto">自动获取</button>
               <button type="button" class="mini-btn" id="iconUploadBtn">上传图片</button>
+              <button type="button" class="mini-btn" id="letterIconBtn">文字图标</button>
               <input id="iconUpload" type="file" accept="image/*" hidden />
             </div>
             <input id="fIcon" type="text" placeholder="或粘贴图标地址（留空自动获取）" spellcheck="false" />
           </div>
         </div>
+        <div class="letter-icon-panel" id="letterIconPanel" hidden>
+          <div class="letter-icon-row">
+            <input id="letterIconText" type="text" maxlength="12" placeholder="输入 1~6 个字或字母，4 字以上自动两行" spellcheck="false" />
+            <button type="button" class="mini-btn" id="letterIconShuffle">换色</button>
+          </div>
+          <div class="letter-icon-row">
+            <div class="letter-icon-colors" id="letterIconColors"></div>
+            <input id="letterIconColor" type="text" maxlength="9" placeholder="#3b82f6" spellcheck="false" />
+          </div>
+        </div>
+        <div class="icon-candidates" id="iconCandidates" hidden></div>
       </div>
 
       <label class="field" id="fGroupField">
@@ -172,6 +184,12 @@
           <input type="checkbox" id="optLabels" />
           <i class="switch"></i>
         </label>
+        <label class="switch-row">
+          <span>图标使用统一底色与边框</span>
+          <input type="checkbox" id="optIconFrame" />
+          <i class="switch"></i>
+        </label>
+        <p class="tip">关闭后图标按原始形状铺满，不再有统一底板、边框和投影，接近站点自身的 logo 效果。</p>
 
       </section>
 
@@ -183,13 +201,25 @@
           <input id="optPerRow" type="number" min="3" max="8" step="1" value="8" />
         </div>
 
+        <p class="sub-label">图标大小</p>
+        <div class="inline-row">
+          <input id="optIconSize" type="range" min="40" max="88" step="2" value="60" />
+          <span class="slider-val" id="optIconSizeVal">60px</span>
+        </div>
+
+        <p class="sub-label">名称字号</p>
+        <div class="inline-row">
+          <input id="optLabelSize" type="range" min="10" max="18" step="0.5" value="12.5" />
+          <span class="slider-val" id="optLabelSizeVal">12.5px</span>
+        </div>
+
         <p class="sub-label">网格对齐</p>
         <div class="chips" id="alignChips"></div>
 
         <p class="sub-label">书签按钮位置</p>
         <div class="chips" id="bmPosChips"></div>
 
-        <p class="tip">每行数量可在 3 ~ 8 之间调整，同时决定每页的图标总数（每页固定 3 行）。书签按钮位置指屏幕右侧悬浮按钮在高度上的位置（整屏三等份）。</p>
+        <p class="tip">每行数量可在 3 ~ 8 之间调整，同时决定每页的图标总数（每页固定 3 行）。图标大小范围 40 ~ 88px，名称字号范围 10 ~ 18px，拖动即时预览。书签按钮位置指屏幕右侧悬浮按钮在高度上的位置（整屏三等份）。</p>
       </section>
 
       <section class="setting-block" data-section="sync">
@@ -285,7 +315,7 @@
     </div>
 
     <footer class="drawer-foot">
-      <span class="version">启航 · v1.1.1</span>
+      <span class="version">启航 · v1.2.0</span>
       <div class="spacer"></div>
       <button class="primary-btn" data-close="settingsMask">完成</button>
     </footer>

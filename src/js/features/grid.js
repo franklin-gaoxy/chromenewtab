@@ -30,37 +30,208 @@ function pageCount(len, searching) {
   return pages;
 }
 
+/* 图标清晰度阈值：边长低于 48px 视为模糊，达到 96px 才认为足够高清 */
+const ICON_CLEAR_PX = 48;
+const ICON_HI_PX = 96;
+const ICON_CACHE_KEY = 'qihang:icon-cache';
+const ICON_CACHE_TTL = 1000 * 60 * 60 * 24 * 7; // 7 天
+const ICON_CACHE_MAX = 400;
+
+/* 解析结果按 host 落到 localStorage：刷新页面时直接命中，不再先闪字母块 */
+function loadIconCache() {
+  const map = new Map();
+  try {
+    const data = JSON.parse(localStorage.getItem(ICON_CACHE_KEY) || '{}');
+    const now = Date.now();
+    Object.keys(data).forEach((host) => {
+      const row = data[host];
+      if (!row || !row.src) return;
+      if (now - Number(row.ts || 0) > ICON_CACHE_TTL) return;
+      map.set(host, row.src);
+    });
+  } catch (e) { /* 缓存损坏就当空的 */ }
+  return map;
+}
+
+function persistIconCache(host, src) {
+  try {
+    const data = JSON.parse(localStorage.getItem(ICON_CACHE_KEY) || '{}');
+    data[host] = { src: src, ts: Date.now() };
+    const keys = Object.keys(data);
+    if (keys.length > ICON_CACHE_MAX) {
+      keys
+        .sort((a, b) => Number(data[a].ts || 0) - Number(data[b].ts || 0))
+        .slice(0, keys.length - ICON_CACHE_MAX)
+        .forEach((k) => delete data[k]);
+    }
+    localStorage.setItem(ICON_CACHE_KEY, JSON.stringify(data));
+  } catch (e) { /* 写失败不影响显示 */ }
+}
+
+function rememberIcon(host, src) {
+  if (!host || !src) return;
+  iconSrcCache.set(host, src);
+  persistIconCache(host, src);
+}
+
+function forgetIcon(host) {
+  iconSrcCache.delete(host);
+  try {
+    const data = JSON.parse(localStorage.getItem(ICON_CACHE_KEY) || '{}');
+    if (data[host]) {
+      delete data[host];
+      localStorage.setItem(ICON_CACHE_KEY, JSON.stringify(data));
+    }
+  } catch (e) { /* 忽略 */ }
+}
+
+const iconSrcCache = loadIconCache(); // host -> 最终采用的图标地址（跨会话保留）
+const iconJobs = new Map();           // host -> 正在解析的 Promise（避免同站点重复请求）
+
+/* 加载单张图标，失败或超时返回 null */
+function loadIcon(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const timer = setTimeout(() => resolve(null), 2500);
+    img.onload = () => {
+      clearTimeout(timer);
+      resolve(img);
+    };
+    img.onerror = () => {
+      clearTimeout(timer);
+      resolve(null);
+    };
+    img.src = src;
+  });
+}
+
+/* 1x1 像素、favicon.im 的「灰底字母」占位 SVG（100 的 viewBox 在 Chromium 渲染为 150x150）都不算图标 */
+function isPlaceholderIcon(img) {
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  if (w < 8 || h < 8) return true;
+  return w === 150 && h === 150;
+}
+
+/* 按候选顺序找图：优先 96px+ 的真高清，其次 48px+，都没有才退回第一张可用的 */
+function resolveIcon(item) {
+  const custom = String(item.icon || '').trim();
+  if (custom) return Promise.resolve(custom);
+
+  const host = hostOf(item.url);
+  if (!host) return Promise.resolve('');
+  if (iconSrcCache.has(host)) return Promise.resolve(iconSrcCache.get(host));
+  if (iconJobs.has(host)) return iconJobs.get(host);
+
+  const candidates = iconCandidateList(item.url).slice(0, 8);
+  const job = (async () => {
+    let mid = '';
+    let any = '';
+    for (const src of candidates) {
+      const img = await loadIcon(src);
+      if (!img || isPlaceholderIcon(img)) continue;
+      const px = Math.max(img.naturalWidth, img.naturalHeight);
+      if (!any) any = src;
+      if (px >= ICON_HI_PX) {
+        rememberIcon(host, src);
+        return src;
+      }
+      if (px >= ICON_CLEAR_PX && !mid) mid = src;
+    }
+    const best = mid || any;
+    if (best) rememberIcon(host, best);
+    return best;
+  })();
+
+  iconJobs.set(host, job);
+  job.then(() => iconJobs.delete(host));
+  return job;
+}
+
 function paintIcon(container, item) {
   const label = item.title || hostOf(item.url) || '';
   const hue = hashHue(label || item.url);
-  const src = item.icon || faviconUrl(item.url, 64);
+  const host = hostOf(item.url);
+  const custom = String(item.icon || '').trim();
 
-  container.innerHTML = '';
-  container.classList.remove('cover');
-  container.style.background =
-    'linear-gradient(150deg, hsl(' + hue + ' 46% 56%), hsl(' + ((hue + 34) % 360) + ' 52% 34%))';
+  let seq = 0;
+  container.classList.remove('letter-tile');
 
-  const letter = document.createElement('span');
-  letter.className = 'letter';
-  letter.textContent = firstChar(label);
-  container.appendChild(letter);
+  /* 「纯色底 + 首字」只在确实拿不到图时出现，正常路径不会先闪一下文字 */
+  const showLetter = () => {
+    seq += 1;
+    container.innerHTML = '';
+    container.classList.remove('cover');
+    container.style.background =
+      'linear-gradient(150deg, hsl(' + hue + ' 46% 56%), hsl(' + ((hue + 34) % 360) + ' 52% 34%))';
+    const letter = document.createElement('span');
+    letter.className = 'letter';
+    letter.textContent = firstChar(label);
+    container.appendChild(letter);
+  };
 
-  if (!src) return;
+  /* 图片直接上屏（不等 load），加载失败才交给 onFail；序号防止慢请求覆盖新图 */
+  const showImage = (src, onFail) => {
+    if (!src) return;
+    const mine = ++seq;
+    container.innerHTML = '';
+    container.classList.remove('cover');
+    container.style.background = '';
+    const img = document.createElement('img');
+    img.alt = '';
+    img.draggable = false;
+    img.addEventListener(
+      'error',
+      () => {
+        if (mine === seq && onFail) onFail();
+      },
+      { once: true }
+    );
+    container.appendChild(img);
+    img.src = src;
+  };
 
-  const img = document.createElement('img');
-  img.alt = '';
-  img.draggable = false;
-  img.addEventListener(
-    'load',
-    () => {
-      if (!img.naturalWidth) return;
-      container.innerHTML = '';
-      container.style.background = '';
-      container.appendChild(img);
-    },
-    { once: true }
-  );
-  img.src = src;
+  if (custom) {
+    // 文字图标是「整块图标」，放大到接近底板宽度，多行文字才看得清
+    container.classList.toggle('letter-tile', custom.indexOf('data:image/svg+xml') === 0);
+    // 用户指定的图标加载失败就显示占位，不自动换源、不改数据，等用户自己调整
+    showImage(custom, showLetter);
+    return;
+  }
+  if (!host) {
+    showLetter();
+    return;
+  }
+
+  const cached = iconSrcCache.get(host);
+  if (cached) {
+    // 命中缓存直接上屏（HTTP 缓存下几乎瞬时），不画字母块
+    showImage(cached, () => {
+      forgetIcon(host);
+      resolveIcon(item).then((src) => {
+        if (src) showImage(src, showLetter);
+        else showLetter();
+      });
+    });
+    return;
+  }
+
+  // 无缓存：先用浏览器本地 favicon 顶上（通常已缓存），高清源解析完成后再换
+  let resolved = false;
+  let quickFailed = false;
+  const quick = IS_EXT ? faviconUrl(item.url, 128) : '';
+  if (quick) {
+    showImage(quick, () => {
+      if (resolved) showLetter();
+      else quickFailed = true;
+    });
+  }
+
+  resolveIcon(item).then((src) => {
+    resolved = true;
+    if (src) showImage(src, showLetter);
+    else if (!quick || quickFailed) showLetter();
+  });
 }
 
 /* 磁贴拖拽排序 / 合并（网站磁贴、文件夹磁贴与组件磁贴共用） */

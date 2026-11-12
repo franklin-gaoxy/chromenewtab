@@ -117,6 +117,9 @@ const DEFAULT_SETTINGS = {
   customBg: '',
   openInNewTab: true,
   showLabels: true,
+  iconFrame: true,    // 图标是否使用统一底色 + 边框（关闭后按原始形状铺满）
+  iconSize: 60,       // 图标边长 px（40 ~ 88，默认 60）
+  labelSize: 12.5,    // 磁贴名称字号 px（10 ~ 18，默认 12.5）
   perRow: 8,          // 每行图标数量（3 ~ 8，默认 8）
   align: 'center',    // 网格对齐：center | left | right
   bmWidth: 340,       // 书签侧边栏宽度
@@ -188,7 +191,7 @@ function hashHue(str) {
 function faviconUrl(rawUrl, size) {
   const url = normalizeUrl(rawUrl);
   if (!url) return '';
-  const px = size || 64;
+  const px = size || 128;
   if (IS_EXT) {
     return chrome.runtime.getURL('_favicon/?pageUrl=' + encodeURIComponent(url) + '&size=' + px);
   }
@@ -196,6 +199,132 @@ function faviconUrl(rawUrl, size) {
     return 'https://icons.duckduckgo.com/ip3/' + new URL(url).hostname + '.ico';
   } catch (e) {
     return '';
+  }
+}
+
+/* 取根域：a.b.feishu.cn → feishu.cn，用于子域站点回退主站图标 */
+function rootDomainOf(rawUrl) {
+  try {
+    const host = new URL(normalizeUrl(rawUrl)).hostname;
+    const parts = host.split('.');
+    if (parts.length <= 2) return host;
+    const last2 = parts.slice(-2).join('.');
+    // co.uk / com.cn 这类二级后缀要取三段
+    if (/^(com|net|org|gov|edu|co|ac)\.(cn|uk|jp|kr|hk|tw|au|nz|br|in|sg)$/.test(last2)) {
+      return parts.slice(-3).join('.');
+    }
+    return last2;
+  } catch (e) {
+    return '';
+  }
+}
+
+/* 站点图标候选：按「高清优先」排序，paintIcon 会逐个尝试并取第一个足够清晰的 */
+function iconCandidateList(rawUrl) {
+  const url = normalizeUrl(rawUrl);
+  if (!url) return [];
+  const list = [];
+  const push = (u) => {
+    if (u && list.indexOf(u) < 0) list.push(u);
+  };
+  let host = '';
+  try {
+    host = new URL(url).hostname;
+  } catch (e) {
+    return list;
+  }
+  const root = rootDomainOf(url);
+  // 第三方服务会去抓 apple-touch-icon / 大尺寸 logo，比 Chrome 的 16px 缓存清晰得多
+  // 子域（如 xxx.feishu.cn）常常只有主站收录了图标，所以根域紧随其后
+  push('https://favicon.im/' + host + '?larger=true');
+  if (root && root !== host) push('https://favicon.im/' + root + '?larger=true');
+  // icon.horse 对大站能拿到 128~256px 的原始 logo；未收录时会返回占位图，只放在靠后的位置
+  if (root && root !== host) push('https://icon.horse/icon/' + root);
+  push('https://icon.horse/icon/' + host);
+  push('https://logo.clearbit.com/' + host);
+  if (root && root !== host) push('https://logo.clearbit.com/' + root);
+  push('https://www.google.com/s2/favicons?domain=' + host + '&sz=256');
+  if (root && root !== host) push('https://www.google.com/s2/favicons?domain=' + root + '&sz=256');
+  push('https://icons.duckduckgo.com/ip3/' + (root || host) + '.ico');
+  push('https://' + host + '/favicon.ico');
+  if (IS_EXT) push(faviconUrl(url, 256));
+  return list;
+}
+
+/* Chrome 内置 _favicon 地址不能固化进数据（换扩展 ID / 换浏览器就失效） */
+function isInternalFaviconUrl(src) {
+  return String(src || '').indexOf('_favicon/') >= 0;
+}
+
+/* ---------------- 纯色文字图标（用户自选，存成 SVG data URL） ---------------- */
+
+/* 1~3 字单行、4 字 2+2、5 字 3+2、6 字 3+3；字号按最长一行保守取值，不会出界 */
+function letterIconLines(text) {
+  const chars = Array.from(String(text || '').replace(/\s+/g, '')).slice(0, 6);
+  if (!chars.length) return [];
+  if (chars.length <= 3) return [chars.join('')];
+  if (chars.length === 4) return [chars.slice(0, 2).join(''), chars.slice(2).join('')];
+  return [chars.slice(0, 3).join(''), chars.slice(3).join('')];
+}
+
+/* 色号输入归一化：#abc / abc / #aabbcc → #aabbcc；不合法返回空串 */
+function normalizeHexColor(input) {
+  const m = String(input || '').trim().match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (!m) return '';
+  const hex = m[1].toLowerCase();
+  return '#' + (hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex);
+}
+
+function letterIconDataUrl(text, color, size) {
+  const lines = letterIconLines(text);
+  if (!lines.length) return '';
+  const total = Array.from(lines.join('')).length;
+  const raw = String(color || '');
+  // 只接受 #rrggbb / hsl(...)，其余按文字哈希取色
+  const bg = /^#[0-9a-f]{6}$/i.test(raw) || /^hsl\(/i.test(raw)
+    ? raw
+    : 'hsl(' + hashHue(lines.join('')) + ' 52% 46%)';
+  const px = size || 128;
+  const fontSize = lines.length > 1 ? 28 : total === 1 ? 50 : total === 2 ? 40 : 29;
+  const gap = fontSize * 1.12;
+  const baseY = lines.length > 1 ? 50 - gap / 2 : 50;
+  const texts = lines
+    .map(
+      (line, i) =>
+        '<text x="50" y="' + (baseY + i * gap).toFixed(2) + '" text-anchor="middle" ' +
+        'dominant-baseline="central" font-family="system-ui,-apple-system,Segoe UI,Microsoft YaHei,PingFang SC,sans-serif" ' +
+        'font-size="' + fontSize + '" font-weight="600" fill="#fff">' + esc(line) + '</text>'
+    )
+    .join('');
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="' + px + '" height="' + px + '">' +
+    '<rect width="100" height="100" rx="22" fill="' + bg + '"/>' + texts + '</svg>';
+  return 'data:image/svg+xml,' + encodeURIComponent(svg);
+}
+
+/* 从 data URL 读回文字与底色，编辑已有站点时回显；不是文字图标则返回 null */
+function letterIconSource(url) {
+  const src = String(url || '');
+  if (src.indexOf('data:image/svg+xml') !== 0) return null;
+  try {
+    const svg = decodeURIComponent(src.slice(src.indexOf(',') + 1));
+    const text = (svg.match(/<text[^>]*>[^<]*<\/text>/g) || [])
+      .map((t) =>
+        t
+          .replace(/^<text[^>]*>/, '')
+          .replace(/<\/text>$/, '')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+      )
+      .join('');
+    const fill = svg.match(/<rect[^>]*fill="([^"]*)"/);
+    const color = fill && fill[1] && fill[1].indexOf('url(') !== 0 ? fill[1] : '';
+    return { text: text, color: color };
+  } catch (e) {
+    return null;
   }
 }
 
