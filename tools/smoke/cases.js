@@ -472,6 +472,10 @@ function runSmokeTests() {
         state.settings.iconAutoFetch = keepIconAuto;
         ok('icon-auto-on-safe', iconAutoSafe);
 
+        /* ---------------- 图标候选来源数量 ---------------- */
+        const candList = iconCandidateList('https://mail.qq.com/');
+        ok('icon-candidates-many', candList.length >= 14, 'n=' + candList.length);
+
         done();
       })
       .catch((err) => {

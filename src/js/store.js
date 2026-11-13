@@ -236,19 +236,26 @@ function iconCandidateList(rawUrl) {
     return list;
   }
   const root = rootDomainOf(url);
+  const sub = !!root && root !== host;
   // 第三方服务会去抓 apple-touch-icon / 大尺寸 logo，比 Chrome 的 16px 缓存清晰得多
   // 子域（如 xxx.feishu.cn）常常只有主站收录了图标，所以根域紧随其后
   push('https://favicon.im/' + host + '?larger=true');
-  if (root && root !== host) push('https://favicon.im/' + root + '?larger=true');
+  if (sub) push('https://favicon.im/' + root + '?larger=true');
+  // 站点自带的 touch icon 通常就是 180×180 的大图，且同域、稳定
+  push('https://' + host + '/apple-touch-icon.png');
   // icon.horse 对大站能拿到 128~256px 的原始 logo；未收录时会返回占位图，只放在靠后的位置
-  if (root && root !== host) push('https://icon.horse/icon/' + root);
   push('https://icon.horse/icon/' + host);
+  if (sub) push('https://icon.horse/icon/' + root);
   push('https://logo.clearbit.com/' + host);
-  if (root && root !== host) push('https://logo.clearbit.com/' + root);
+  if (sub) push('https://logo.clearbit.com/' + root);
   push('https://www.google.com/s2/favicons?domain=' + host + '&sz=256');
-  if (root && root !== host) push('https://www.google.com/s2/favicons?domain=' + root + '&sz=256');
-  push('https://icons.duckduckgo.com/ip3/' + (root || host) + '.ico');
+  if (sub) push('https://www.google.com/s2/favicons?domain=' + root + '&sz=256');
+  push('https://' + host + '/apple-touch-icon-precomposed.png');
+  push('https://' + host + '/favicon-32x32.png');
+  push('https://' + host + '/favicon.png');
   push('https://' + host + '/favicon.ico');
+  push('https://icons.duckduckgo.com/ip3/' + (root || host) + '.ico');
+  push('https://www.google.com/s2/favicons?domain=' + host + '&sz=64');
   if (IS_EXT) push(faviconUrl(url, 256));
   return list;
 }

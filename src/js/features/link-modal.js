@@ -151,7 +151,8 @@ function renderIconCandidates() {
   box.hidden = false;
   box.innerHTML = '';
 
-  iconCandidateList(abs).slice(0, 6).forEach((src) => {
+  // 展开全部候选：加载失败的（404 / 占位图）由 onerror 自行移除，能选的尽量多
+  iconCandidateList(abs).slice(0, 14).forEach((src) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'icon-candidate';
