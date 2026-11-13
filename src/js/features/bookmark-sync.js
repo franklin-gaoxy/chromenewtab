@@ -36,13 +36,16 @@ async function renderBookmarkSync() {
 
   box.innerHTML =
     '<div class="bm-sync-head">' +
-      '<button class="bm-back" id="bmBackTree" type="button">← 返回书签列表</button>' +
+      '<button class="bm-back" id="bmBackTree" type="button" data-i18n="bm.backToList">← 返回书签列表</button>' +
     '</div>' +
     '<div class="bm-sync-tabs">' +
-      '<button type="button" data-tab="toBookmarks" class="active">主页 → 书签</button>' +
-      '<button type="button" data-tab="toGroups">书签 → 主页</button>' +
+      '<button type="button" data-tab="toBookmarks" data-i18n="bm.toBookmarks" class="active">主页 → 书签</button>' +
+      '<button type="button" data-tab="toGroups" data-i18n="bm.toGroups">书签 → 主页</button>' +
     '</div>' +
-    '<div class="bm-sync-body" id="bmSyncBody"><p class="bm-empty">正在读取书签目录…</p></div>';
+    '<div class="bm-sync-body" id="bmSyncBody"><p class="bm-empty">' +
+      esc(i18n('bm.loadingDirs')) +
+    '</p></div>';
+  applyI18n(box);
 
   $('bmBackTree').addEventListener('click', () => {
     hideBookmarkSync();
@@ -63,7 +66,8 @@ async function renderBookmarkSync() {
   try {
     await bmLoadTree();
   } catch (e) {
-    $('bmSyncBody').innerHTML = '<p class="bm-empty">读取书签失败：' + esc(e && e.message) + '</p>';
+    $('bmSyncBody').innerHTML =
+      '<p class="bm-empty">' + esc(i18n('bm.loadFailed', { msg: e && e.message })) + '</p>';
     return;
   }
 
@@ -76,18 +80,19 @@ function renderBookmarkSyncBody() {
 
   // 缓存被清空时（例如刚执行完同步）重新拉取一次目录
   if (!bmTree) {
-    box.innerHTML = '<p class="bm-empty">正在读取书签目录…</p>';
+    box.innerHTML = '<p class="bm-empty">' + esc(i18n('bm.loadingDirs')) + '</p>';
     bmLoadTree()
       .then(() => renderBookmarkSyncBody())
       .catch((e) => {
-        box.innerHTML = '<p class="bm-empty">读取书签失败：' + esc(e && e.message) + '</p>';
+        box.innerHTML =
+          '<p class="bm-empty">' + esc(i18n('bm.loadFailed', { msg: e && e.message })) + '</p>';
       });
     return;
   }
 
   const folders = bmFolderOptions();
   if (!folders.length) {
-    box.innerHTML = '<p class="bm-empty">没有可用的书签目录</p>';
+    box.innerHTML = '<p class="bm-empty">' + esc(i18n('bm.noDirs')) + '</p>';
     return;
   }
 
@@ -100,9 +105,10 @@ function renderBookmarkSyncBody() {
 
   if (bmSyncTab === 'toBookmarks') {
     box.innerHTML =
-      '<p class="bm-sync-tip">在所选目录下为每个分组创建一个同名文件夹，把主页图标写进去；主页里的文件夹会建成同名子文件夹（只一层）。已存在的同名书签会跳过。</p>' +
-      '<label class="bm-field"><span>目标书签目录</span><select id="bmTargetFolder">' + folderOptions + '</select></label>' +
-      '<button class="bm-run" id="bmRunToMarks" type="button">同步到书签</button>' +
+      '<p class="bm-sync-tip">' + esc(i18n('bm.toMarksTip')) + '</p>' +
+      '<label class="bm-field"><span>' + esc(i18n('bm.targetDir')) + '</span>' +
+        '<select id="bmTargetFolder">' + folderOptions + '</select></label>' +
+      '<button class="bm-run" id="bmRunToMarks" type="button">' + esc(i18n('bm.runToMarks')) + '</button>' +
       '<p class="bm-sync-status" id="bmSyncStatus"></p>';
 
     $('bmRunToMarks').addEventListener('click', () => {
@@ -116,16 +122,18 @@ function renderBookmarkSyncBody() {
     .join('');
 
   box.innerHTML =
-    '<p class="bm-sync-tip">把所选目录里的书签导入指定分组，按网址去重。文件夹只保留一层。</p>' +
-    '<label class="bm-field"><span>源书签目录</span><select id="bmSourceFolder">' + folderOptions + '</select></label>' +
-    '<label class="bm-field"><span>目标分组</span><select id="bmTargetGroup">' + groupOptions + '</select></label>' +
+    '<p class="bm-sync-tip">' + esc(i18n('bm.syncToGroupsTip')) + '</p>' +
+    '<label class="bm-field"><span>' + esc(i18n('bm.sourceDir')) + '</span>' +
+      '<select id="bmSourceFolder">' + folderOptions + '</select></label>' +
+    '<label class="bm-field"><span>' + esc(i18n('bm.targetGroup')) + '</span>' +
+      '<select id="bmTargetGroup">' + groupOptions + '</select></label>' +
     '<div class="bm-mode">' +
       '<label><input type="radio" name="bmSyncMode" value="keep" checked />' +
-        '<span>保留一级目录：子目录在主页生成同名文件夹，其中的书签（含更深层级）都收进该文件夹</span></label>' +
+        '<span>' + esc(i18n('bm.modeKeep')) + '</span></label>' +
       '<label><input type="radio" name="bmSyncMode" value="flat" />' +
-        '<span>仅当前目录：只同步该目录下直接包含的书签，子目录忽略</span></label>' +
+        '<span>' + esc(i18n('bm.modeFlat')) + '</span></label>' +
     '</div>' +
-    '<button class="bm-run" id="bmRunToGroups" type="button">同步到分组</button>' +
+    '<button class="bm-run" id="bmRunToGroups" type="button">' + esc(i18n('bm.runToGroups')) + '</button>' +
     '<p class="bm-sync-status" id="bmSyncStatus"></p>';
 
   $('bmRunToGroups').addEventListener('click', () => {
@@ -141,14 +149,16 @@ function renderBookmarkSyncBody() {
 async function runBmSync(buttonId, statusNode, task, arg) {
   const btn = $(buttonId);
   if (btn) btn.disabled = true;
-  if (statusNode) statusNode.textContent = '正在同步…';
+  if (statusNode) statusNode.textContent = i18n('bm.syncing');
 
   try {
     const result = await task(arg);
     if (statusNode) statusNode.textContent = result;
     toast(result);
   } catch (e) {
-    const msg = '同步失败：' + (e && e.message ? e.message : '未知错误');
+    const msg = i18n('bm.syncFailed', {
+      msg: e && e.message ? e.message : i18n('common.unknownError')
+    });
     if (statusNode) statusNode.textContent = msg;
     toast(msg);
   } finally {
@@ -158,7 +168,7 @@ async function runBmSync(buttonId, statusNode, task, arg) {
 
 /* ---------------- 主页 → 书签 ---------------- */
 async function doSyncGroupsToBookmarks(parentId) {
-  if (!parentId) throw new Error('请选择目标目录');
+  if (!parentId) throw new Error(i18n('bm.pickTarget'));
 
   let foldersMade = 0;
   let created = 0;
@@ -200,8 +210,12 @@ async function doSyncGroupsToBookmarks(parentId) {
   }
 
   bmTree = null;
-  return '已同步 ' + groupsTouched + ' 个分组：新建目录 ' + foldersMade + ' 个、书签 ' +
-    created + ' 条，跳过已存在 ' + skipped + ' 条';
+  return i18n('bm.syncToMarksDone', {
+    groups: groupsTouched,
+    folders: foldersMade,
+    links: created,
+    skipped
+  });
 }
 
 async function bmEnsureFolder(parentId, title) {
@@ -215,10 +229,10 @@ async function bmEnsureFolder(parentId, title) {
 /* ---------------- 书签 → 主页 ---------------- */
 async function doSyncBookmarksToGroup(options) {
   const { sourceId, groupId, keepFolders } = options || {};
-  if (!sourceId) throw new Error('请选择源目录');
+  if (!sourceId) throw new Error(i18n('bm.pickSource'));
 
   const group = groupById(groupId);
-  if (!group) throw new Error('目标分组不存在');
+  if (!group) throw new Error(i18n('bm.noGroup'));
 
   const existing = collectGroupUrls(group);
   let added = 0;
@@ -260,7 +274,7 @@ async function doSyncBookmarksToGroup(options) {
       const inner = await bmCollectUrls(node.id);
       if (!inner.length) continue;
 
-      const title = String(node.title || '文件夹').slice(0, 20);
+      const title = String(node.title || i18n('folder.newName')).slice(0, 20);
       const target = { id: uid('f'), kind: 'folder', title, items: [] };
       inner.forEach((site) => pushSite(target.items, site));
       if (!target.items.length) continue;
@@ -276,9 +290,14 @@ async function doSyncBookmarksToGroup(options) {
   save();
   renderAll();
 
-  return '已导入「' + group.name + '」：新增 ' + added + ' 条' +
-    (keepFolders ? '、文件夹 ' + foldersAdded + ' 个' : '') +
-    '，跳过 ' + skipped + ' 条（重复或非网页地址）';
+  return keepFolders
+    ? i18n('bm.syncToGroupsDone', {
+        group: group.name,
+        added,
+        folders: foldersAdded,
+        skipped
+      })
+    : i18n('bm.syncToGroupsDoneNoFolders', { group: group.name, added, skipped });
 }
 
 /* 递归收集某个目录下的全部书签（用于摊平进主页文件夹） */

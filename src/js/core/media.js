@@ -11,7 +11,7 @@ function loadImage(file) {
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('图片读取失败'));
+      reject(new Error(i18n('common.loadFailed')));
     };
     img.src = url;
   });

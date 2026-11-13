@@ -128,6 +128,8 @@ async function init() {
     raw = null;
   }
 
+  // 先定语言：normalizeData 里的默认文件夹名等要用当前语言
+  setLang((raw && raw.settings && raw.settings.lang) || 'zh');
   state = normalizeData(raw || defaultData());
   if (!raw) {
     store.set(STORE_KEY, {
@@ -143,6 +145,7 @@ async function init() {
     /* ignore */
   }
 
+  applyLanguage(state.settings.lang);
   applySettings();
   buildSettingsPanel();
   renderAll();

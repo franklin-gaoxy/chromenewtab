@@ -38,7 +38,10 @@ function updateIconPreview() {
 }
 
 /* ---------------- 纯色文字图标 ---------------- */
-const FICON_PLACEHOLDER = '或粘贴图标地址（留空自动获取）';
+/* 图标输入框的常规提示（语言切换后会重新取） */
+function ficonPlaceholder() {
+  return i18n('link.iconPh');
+}
 /* 文字图标可选底色（点色块或直接填色号） */
 const LETTER_ICON_COLORS = ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#14b8a6', '#3b82f6', '#8b5cf6', '#64748b'];
 let letterIconBg = '';    // 空 = 按文字哈希自动取色
@@ -66,7 +69,7 @@ function applyLetterIcon() {
     letterIconValue = '';
     $('letterIconColor').value = '';
     $('fIcon').value = '';
-    $('fIcon').placeholder = FICON_PLACEHOLDER;
+    $('fIcon').placeholder = ficonPlaceholder();
     syncColorDots();
     updateIconPreview();
     syncCandidateActive();
@@ -75,7 +78,7 @@ function applyLetterIcon() {
   letterIconValue = letterIconDataUrl(text, letterIconBg);
   // data URL 只存变量不写输入框，避免一长串地址出现在表单里
   $('fIcon').value = '';
-  $('fIcon').placeholder = '正在使用文字图标，点「自动获取」可恢复';
+  $('fIcon').placeholder = i18n('link.iconInUse');
   syncColorDots();
   updateIconPreview();
   syncCandidateActive();
@@ -87,14 +90,14 @@ function syncLetterIconPanel() {
   const src = letterIconSource(raw);
   const panel = $('letterIconPanel');
   letterIconValue = src ? raw : '';
-  $('fIcon').placeholder = FICON_PLACEHOLDER;
+  $('fIcon').placeholder = ficonPlaceholder();
   if (src) {
     $('letterIconText').value = src.text;
     letterIconBg = /^#/.test(src.color || '') ? src.color : '';
     $('letterIconColor').value = letterIconBg;
     panel.hidden = false;
     $('fIcon').value = '';
-    $('fIcon').placeholder = '正在使用文字图标，点「自动获取」可恢复';
+    $('fIcon').placeholder = i18n('link.iconInUse');
   } else {
     $('letterIconText').value = '';
     $('letterIconColor').value = '';
@@ -147,7 +150,7 @@ function renderIconCandidates() {
     btn.type = 'button';
     btn.className = 'icon-candidate';
     btn.dataset.src = src;
-    btn.title = '使用这个图标';
+    btn.title = i18n('link.iconCandidates');
 
     const img = document.createElement('img');
     img.alt = '';
@@ -195,7 +198,7 @@ function openLinkModal(opts) {
   if (groupField) groupField.hidden = !!folderId && !item;
 
   editing = { groupId, itemId: item ? item.id : null, folderId };
-  $('linkModalTitle').textContent = item ? '编辑网站' : '添加网站';
+  $('linkModalTitle').textContent = item ? i18n('link.editTitle') : i18n('link.addTitle');
   $('fTitle').value = item ? item.title : '';
   $('fUrl').value = item ? item.url : '';
   $('fIcon').value = item ? item.icon : '';
@@ -216,7 +219,7 @@ function openLinkModal(opts) {
 function saveLink() {
   const abs = normalizeUrl($('fUrl').value);
   if (!abs) {
-    toast('请填写正确的网址，例如 juejin.cn');
+    toast(i18n('link.urlRequired'));
     $('fUrl').focus();
     return;
   }
@@ -254,7 +257,11 @@ function saveLink() {
   closeModal('linkMask');
   save();
   renderAll();
-  toast(editing && editing.itemId ? '已更新' : '已添加到「' + destination + '」');
+  toast(
+    editing && editing.itemId
+      ? i18n('common.updated')
+      : i18n('common.added', { name: destination })
+  );
   editing = null;
 }
 
@@ -267,7 +274,7 @@ function bindLinkEvents() {
   $('fTitle').addEventListener('input', updateIconPreview);
   $('fIcon').addEventListener('input', () => {
     letterIconValue = '';
-    $('fIcon').placeholder = FICON_PLACEHOLDER;
+    $('fIcon').placeholder = ficonPlaceholder();
     updateIconPreview();
     syncCandidateActive();
   });
@@ -283,7 +290,7 @@ function bindLinkEvents() {
 
   $('iconAuto').addEventListener('click', () => {
     $('fIcon').value = '';
-    $('fIcon').placeholder = FICON_PLACEHOLDER;
+    $('fIcon').placeholder = ficonPlaceholder();
     letterIconBg = '';
     letterIconValue = '';
     $('letterIconText').value = '';
@@ -292,7 +299,7 @@ function bindLinkEvents() {
     syncColorDots();
     updateIconPreview();
     syncCandidateActive();
-    toast('已改为自动获取站点图标');
+    toast(i18n('link.iconAutoDone'));
   });
 
   // 文字图标底色：预设色块 + 直接填色号
@@ -353,9 +360,9 @@ function bindLinkEvents() {
     try {
       $('fIcon').value = await fileToIcon(file);
       updateIconPreview();
-      toast('图标已更新');
+      toast(i18n('link.iconUpdated'));
     } catch (err) {
-      toast('图片读取失败');
+      toast(i18n('common.loadFailed'));
     }
   });
 

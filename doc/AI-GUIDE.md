@@ -55,7 +55,7 @@
 
 | 想做什么 | 主要文件 |
 | --- | --- |
-| 左侧分组栏（宽度、图标、重命名） | `src/js/features/rail.js`、`src/css/rail.css` |
+| 左侧分组栏（宽度、图标、重命名、拖拽排序） | `src/js/features/rail.js`（`renderSidebar` / `moveGroup`）、`src/css/rail.css` |
 | 搜索框外观 / 引擎切换 | `src/css/stage.css`、`src/js/features/search.js`、`src/js/store.js`（ENGINES） |
 | 网格列数、对齐、每页数量 | `src/js/features/preferences.js`、`src/js/store.js`（DEFAULT_SETTINGS）、`src/newtab.html`、`src/js/features/settings-panel.js`、`src/css/grid.css` |
 | 磁贴样式 / 拖拽排序 / 拖拽落点 | `src/css/grid.css`、`src/js/features/grid.js`（`attachTileDrag` / `dropZone` / `moveItem`） |
@@ -65,6 +65,7 @@
 | 组件选择弹窗 | `src/js/widgets/picker.js`、`src/css/widgets.css` |
 | 设置抽屉内容 | `src/newtab.html`（`setting-block`）、`src/js/features/settings-panel.js`、`src/css/drawer.css`、`src/css/modal.css` |
 | 站点编辑弹窗 | `src/js/features/link-modal.js`、`src/newtab.html`（`#linkMask`） |
+| 界面文案 / 语言切换 | `src/js/core/i18n.js`、`src/newtab.html`（`data-i18n*`）、`src/js/features/settings-panel.js`（`changeUiLanguage`） |
 | 备份 / 导入 | `src/js/features/backup.js` |
 | 远程同步 | `src/js/features/sync.js`、`doc/PROTOCOL.md` |
 | 浏览器书签侧边栏（悬浮按钮 / 树 / 搜索 / 宽度 / 按钮位置） | `src/js/features/bookmarks.js`、`src/css/bookmarks.css`、`src/js/features/preferences.js`（`bmHandlePos`） |

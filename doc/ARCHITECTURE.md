@@ -49,6 +49,7 @@
       ├─ background.js        Service Worker：点击工具栏图标打开新标签页
       ├─ main.js              入口：bindEvents 汇总、全局快捷键、init()
       ├─ core/
+      │  ├─ i18n.js           界面文案字典（zh / en）：i18n()、applyI18n()、applyLanguage()
       │  ├─ icons.js          内联 SVG 常量 ICONS
       │  ├─ utils.js          $、toast、copyText、openUrl、downloadBlob
       │  ├─ state.js          全局可变状态：state / syncState / ui / dragState / editing
@@ -82,7 +83,8 @@
 ```
 
 **加载顺序（`src/newtab.html` 必须与之一致）**
-`store.js` → `core/*` → `features/*` → `widgets/registry.js` → `widgets/picker.js` → `widgets/clock.js` → `widgets/ai/*` → `main.js`。
+`core/i18n.js` → `store.js` → `core/*` → `features/*` → `widgets/registry.js` → `widgets/picker.js` → `widgets/clock.js` → `widgets/ai/*` → `main.js`。
+`i18n.js` 必须最先加载：`store.js` 的 `suggestTitle()`、`normalizeItem()` 等会在 `init()` 里调用 `i18n()`。
 features 内部：`bookmarks.js` 早于 `bookmark-sync.js`（后者复用前者的面板与 `bmLoadTree()`）；`folder.js` 紧跟在 `grid.js` 之后（`grid.js` 渲染时调用 `createFolderTile()` / `refreshOpenFolder()`，拖拽落点调用 `canMergeItems()` / `mergeItems()`）；`auto-backup.js` 跟在 `backup.js` 之后（复用 `buildBackupPayload()` 与 `downloadBlob()`）。
 原因：`WidgetRegistry` 是 `const`，各组件文件在顶层立即调用 `register`，因此必须在 registry 之后；`main.js` 最后执行 `init()`。
 
@@ -103,6 +105,7 @@ state = {
   ],
   activeGroupId: 'g_xxx',
   settings: {
+    lang: 'zh',            // 界面语言：zh | en（字典见 core/i18n.js）
     engine: 'bing',        // bing | google | baidu | ddg
     cat: 'web',            // web | images | news | videos | maps
     theme: 'forest',       // 预设 key 或 'custom'
@@ -187,6 +190,10 @@ aiData = {
 - 合并：`mergeItems()`（folder.js），见 3.8。
 拖到网格空白处由 `bindGridEvents()` 的 `#grid` drop 处理（追加到当前分组末尾）。
 
+**分组栏** 的拖动分两种，靠 `railDragId` 区分：
+- 拖动分组项本身（`renderSidebar` 里 `dragstart` 设置 `railDragId`）→ `moveGroup(fromId, toId, after)`：按落点在目标项上 / 下半区（`railDropAfter()`）插到前 / 后，直接重排 `state.groups`；`activeGroupId` 不变。拖动重命名输入框时不触发排序。
+- 拖磁贴到分组栏 → 仍沿用 `dragState` 分支，把磁贴移动到该分组（`.drop-target` 高亮）。
+
 ### 3.4 组件
 右键空白 → `openCanvasMenu()`（menu.js）→ `openWidgetPicker()`（picker.js）→ `addWidget(type)` 往当前分组 push 一个 `kind:'widget'` 的 Item → `renderAll()` → `createWidgetTile()`（registry.js）→ `def.mount(el, ctx)`。
 组件点击 → `def.open(ctx)`；组件右键 → `openWidgetMenu()`。
@@ -252,6 +259,14 @@ aiData = {
 - 保存：只有用户手动点选候选才会写进 `item.icon`；没选就存空字符串走自动获取，站点换 logo 能自动跟上。`isInternalFaviconUrl()` 用于剔除 Chrome `_favicon` 地址（换扩展 ID / 换浏览器就失效），不会因此产生脏数据。
 - 失败处理：`item.icon` 加载失败只显示「纯色底 + 首字」占位，不自动换源、不改数据，等用户自己在编辑弹窗里调整。
 
+### 3.11 界面语言（i18n）
+- 字典：`core/i18n.js` 的 `I18N.zh` / `I18N.en`，键按命名空间分组（`app.*` / `rail.*` / `search.*` / `menu.*` / `folder.*` / `link.*` / `common.*` / `settings.*` / `bm.*` / `widget.*` / `ai.*` / `sync.*` / `theme.*`）。
+- 取文案：`i18n('key', { n: 3 })`，`{n}` 占位；缺键先回退中文，再回退 key 本身。`i18nHas(key)` 判断是否存在，`i18nAll(key)` 取所有语言版本（用于识别历史数据里的默认标题）。
+- 静态 HTML：`data-i18n`（文本）、`data-i18n-html`（富文本）、`data-i18n-ph`（placeholder）、`data-i18n-title`（title）、`data-i18n-aria`（aria-label）；`applyI18n(root)` 统一填充，只替换文本节点，所以 `h3` 上的折叠箭头不会被清掉。
+- JS 动态内容：菜单、toast、确认框直接调用 `i18n()`；持久存在的动态外壳（AI 弹窗 `ensureAiShell`、组件选择器 `ensureWidgetPicker`、书签面板 `ensureBookmarkPanel`）在 `innerHTML` 里写 `data-i18n*`，创建后调用一次 `applyI18n(scope)`。
+- 偏好与启动：语言存在 `settings.lang`；`init()` 先 `setLang()` 再 `normalizeData()`，然后 `applyLanguage(state.settings.lang)` 铺一遍静态文案。
+- 切换：`changeUiLanguage(lang)`（`features/settings-panel.js`）→ `applyLanguage()` + `save()` + `syncSettingsUI()` + `renderAll()`，若 AI 弹窗 / 书签面板已加载则重新渲染其动态内容。
+
 ---
 
 ## 4. 扩展点
@@ -301,7 +316,14 @@ WidgetRegistry.register({
 ### 4.5 新增样式
 放到语义对应的 `src/css/*.css`；确需新文件时，在 `src/newtab.html` 按“基础 → 组件 → 响应式最后”的顺序引入。
 
-### 4.6 调整书签同步行为
+### 4.6 新增界面文案 / 语言
+1. 新增文案：只在 `src/js/core/i18n.js` 的 `zh` 与 `en` 两个字典里各加一条同名 key；HTML 用 `data-i18n*` 引用，JS 用 `i18n('key')`。
+2. 静态节点记得加属性：`data-i18n` / `data-i18n-html` / `data-i18n-ph` / `data-i18n-title` / `data-i18n-aria`，否则切换语言时不会更新。
+3. JS 生成的按钮/开关若要跟随语言：设 `btn.dataset.i18n = 'key'`（或 `dataset.i18nTitle`）再写初始 `textContent`。
+4. 新增语言：给 `I18N` 加一列，并在 `buildSettingsPanel()` 的语言 chips 里加一项；`setLang()` 里的归一化也要放行新语言码。
+5. 属于结构性改动，需同步本文件第 1 节与 3.11。
+
+### 4.7 调整书签同步行为
 - 读取书签、文件夹下拉：`src/js/features/bookmarks.js`（`bmLoadTree` / `bmFolderOptions`）
 - 两个方向的同步与遍历模式：`src/js/features/bookmark-sync.js`（`doSyncGroupsToBookmarks` / `doSyncBookmarksToGroup` / `bmCollectUrls`）
 - 入口：`src/js/features/menu.js` 的「同步书签」+ `openBookmarkPanel(true)`
@@ -388,13 +410,13 @@ Get-ChildItem -Recurse src\js -Filter *.js | ForEach-Object { node --check $_.Fu
 
 # 2) IDE 诊断（在编辑器里对 src 执行 read_lints）
 
-# 3) 冒烟测试（页面内用例，42 项，退出码非 0 即失败）
+# 3) 冒烟测试（页面内用例，46 项，退出码非 0 即失败）
 node tools/smoke/run.js
 ```
 
 `tools/smoke/run.js` 会读 `src/newtab.html`，把 `tools/smoke/cases.js` 内联成 `src/__smoke.html`，用无头 Chrome/Edge 跑一遍并解析 `document.title`，最后删除临时文件（浏览器路径可用环境变量 `CHROME_PATH` 指定）。
 
-**新增用例**：只改 `tools/smoke/cases.js`，在对应分组里追加 `ok('名字', 断言, 失败细节)`；用例只能调用页面已有的全局函数。覆盖范围：文件夹合并 / 磁贴 / 面板（尺寸、列数、居中、滚轮不穿透、过滤）、备份往返、一层约束、同步字段白名单与合并、书签 HTML 层级、书签双向同步（内部伪造 `chrome.bookmarks`，不需要真扩展环境）、设置区块折叠、定时备份到期判断（到点 / 当天只补一次 / 未到点 / 未启用）。
+**新增用例**：只改 `tools/smoke/cases.js`，在对应分组里追加 `ok('名字', 断言, 失败细节)`；用例只能调用页面已有的全局函数。覆盖范围：文件夹合并 / 磁贴 / 面板（尺寸、列数、居中、滚轮不穿透、过滤）、备份往返、一层约束、同步字段白名单与合并、书签 HTML 层级、书签双向同步（内部伪造 `chrome.bookmarks`，不需要真扩展环境）、设置区块折叠、界面语言（切换生效 / DOM 填充 / 缺键回退）、定时备份到期判断（到点 / 当天只补一次 / 未到点 / 未启用）。
 
 ---
 

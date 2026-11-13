@@ -17,8 +17,8 @@ function toast(msg) {
 }
 
 function copyText(text) {
-  const done = () => toast('链接已复制');
-  const fail = () => toast('复制失败，请手动复制');
+  const done = () => toast(i18n('common.copied'));
+  const fail = () => toast(i18n('common.copyFailed'));
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(done).catch(fail);
     return;
@@ -29,7 +29,7 @@ function copyText(text) {
 function openUrl(url) {
   const abs = normalizeUrl(url);
   if (!abs) {
-    toast('链接格式不正确');
+    toast(i18n('common.badUrl'));
     return;
   }
   if (state.settings.openInNewTab) window.open(abs, '_blank', 'noopener');

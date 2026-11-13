@@ -111,6 +111,7 @@ const THEMES = [
 ];
 
 const DEFAULT_SETTINGS = {
+  lang: 'zh',         // 界面语言：zh | en（见 core/i18n.js）
   engine: 'bing',
   cat: 'web',
   theme: 'forest',
@@ -171,7 +172,7 @@ function hostOf(url) {
 
 function suggestTitle(url) {
   const host = hostOf(url);
-  if (!host) return '未命名';
+  if (!host) return i18n('common.unnamed');
   const first = host.split('.')[0];
   return first.charAt(0).toUpperCase() + first.slice(1);
 }
@@ -403,7 +404,7 @@ function normalizeItem(it) {
     return {
       id: it.id || uid('f'),
       kind: 'folder',
-      title: String(it.title || '文件夹').slice(0, 20),
+      title: String(it.title || i18n('folder.newName')).slice(0, 20),
       items: inner
     };
   }

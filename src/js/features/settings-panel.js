@@ -2,6 +2,22 @@
 
 /* ---------------- 设置面板 ---------------- */
 function buildSettingsPanel() {
+  // 语言：中文 / English（自名不随界面语言变化）
+  const langChips = $('langChips');
+  langChips.innerHTML = '';
+  [
+    { key: 'zh', label: 'settings.langZh' },
+    { key: 'en', label: 'settings.langEn' }
+  ].forEach((opt) => {
+    const btn = document.createElement('button');
+    btn.className = 'chip';
+    btn.type = 'button';
+    btn.dataset.lang = opt.key;
+    btn.textContent = i18n(opt.label);
+    btn.addEventListener('click', () => changeUiLanguage(opt.key));
+    langChips.appendChild(btn);
+  });
+
   const engineChips = $('engineChips');
   engineChips.innerHTML = '';
   Object.keys(ENGINES).forEach((key) => {
@@ -15,7 +31,7 @@ function buildSettingsPanel() {
       save();
       syncSettingsUI();
       renderSearchEngine();
-      toast('搜索引擎已切换为 ' + ENGINES[key].label);
+      toast(i18n('search.engineSwitched', { name: ENGINES[key].label }));
     });
     engineChips.appendChild(btn);
   });
@@ -27,7 +43,8 @@ function buildSettingsPanel() {
     btn.className = 'bg-chip';
     btn.type = 'button';
     btn.dataset.theme = theme.key;
-    btn.title = theme.label;
+    btn.dataset.i18nTitle = 'theme.' + theme.key;
+    btn.title = i18nHas('theme.' + theme.key) ? i18n('theme.' + theme.key) : theme.label;
     btn.style.backgroundImage = theme.style;
     btn.addEventListener('click', () => {
       state.settings.theme = theme.key;
@@ -42,14 +59,16 @@ function buildSettingsPanel() {
   customChip.className = 'bg-chip custom';
   customChip.type = 'button';
   customChip.dataset.theme = 'custom';
-  customChip.title = '自定义图片';
-  customChip.textContent = '自定义';
+  customChip.dataset.i18nTitle = 'settings.bgCustom';
+  customChip.dataset.i18n = 'settings.bgCustomShort';
+  customChip.title = i18n('settings.bgCustom');
+  customChip.textContent = i18n('settings.bgCustomShort');
   customChip.style.cssText =
     'display:grid;place-items:center;font-size:11px;color:rgba(255,255,255,.75);' +
     'background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);width:auto;padding:0 10px;';
   customChip.addEventListener('click', () => {
     if (!state.settings.customBg) {
-      toast('先粘贴图片链接或选择本地图片');
+      toast(i18n('settings.bgEmpty'));
       $('bgUrl').focus();
       return;
     }
@@ -119,15 +138,16 @@ function buildSettingsPanel() {
   const alignChips = $('alignChips');
   alignChips.innerHTML = '';
   [
-    { key: 'center', label: '居中' },
-    { key: 'left', label: '靠左' },
-    { key: 'right', label: '靠右' }
+    { key: 'center', label: 'settings.alignCenter' },
+    { key: 'left', label: 'settings.alignLeft' },
+    { key: 'right', label: 'settings.alignRight' }
   ].forEach((opt) => {
     const btn = document.createElement('button');
     btn.className = 'chip';
     btn.type = 'button';
     btn.dataset.align = opt.key;
-    btn.textContent = opt.label;
+    btn.dataset.i18n = opt.label;
+    btn.textContent = i18n(opt.label);
     btn.addEventListener('click', () => {
       state.settings.align = opt.key;
       save();
@@ -140,15 +160,16 @@ function buildSettingsPanel() {
   const bmPosChips = $('bmPosChips');
   bmPosChips.innerHTML = '';
   [
-    { key: 'top', label: '靠上' },
-    { key: 'center', label: '居中' },
-    { key: 'bottom', label: '靠下' }
+    { key: 'top', label: 'settings.bmTop' },
+    { key: 'center', label: 'settings.bmCenter' },
+    { key: 'bottom', label: 'settings.bmBottom' }
   ].forEach((opt) => {
     const btn = document.createElement('button');
     btn.className = 'chip';
     btn.type = 'button';
     btn.dataset.pos = opt.key;
-    btn.textContent = opt.label;
+    btn.dataset.i18n = opt.label;
+    btn.textContent = i18n(opt.label);
     btn.addEventListener('click', () => {
       state.settings.bmHandlePos = opt.key;
       save();
@@ -217,6 +238,9 @@ function initCollapsibleSections() {
 
 function syncSettingsUI() {
   const s = state.settings;
+  document.querySelectorAll('#langChips .chip').forEach((chip) => {
+    chip.classList.toggle('active', chip.dataset.lang === (s.lang || 'zh'));
+  });
   document.querySelectorAll('#engineChips .chip').forEach((chip) => {
     chip.classList.toggle('active', chip.dataset.engine === s.engine);
   });
@@ -242,12 +266,32 @@ function syncSettingsUI() {
   syncAutoBackupUI();
 }
 
+/* 切换界面语言：落盘偏好 → 铺静态文案 → 重绘各模块的动态内容 */
+function changeUiLanguage(lang) {
+  state.settings.lang = applyLanguage(lang);
+  save();
+  syncSettingsUI();
+  renderAll();
+
+  if (typeof aiData !== 'undefined' && aiData) {
+    aiRenderAll();
+    if ($('aiSetBody')) aiRenderSettings();
+  }
+
+  const bmPanel = $('bmPanel');
+  if (bmPanel && !bmPanel.hidden) {
+    // 外壳上的标题 / 标签已由 data-i18n 更新，这里只重绘正文
+    if ($('bmSync') && !$('bmSync').hidden) renderBookmarkSyncBody();
+    else renderBookmarkTree();
+  }
+}
+
 /* ---------------- 事件绑定 ---------------- */
 function bindSettingsEvents() {
   $('bgApplyUrl').addEventListener('click', () => {
     const url = $('bgUrl').value.trim();
     if (!url) {
-      toast('请输入图片链接');
+      toast(i18n('settings.bgUrlEmpty'));
       return;
     }
     state.settings.customBg = url;
@@ -255,7 +299,7 @@ function bindSettingsEvents() {
     save();
     applySettings();
     syncSettingsUI();
-    toast('背景已更新');
+    toast(i18n('settings.bgUrlApplied'));
   });
 
   $('bgUploadBtn').addEventListener('click', () => $('bgUpload').click());
@@ -269,9 +313,9 @@ function bindSettingsEvents() {
       save();
       applySettings();
       syncSettingsUI();
-      toast('背景已更新');
+      toast(i18n('settings.bgUrlApplied'));
     } catch (err) {
-      toast('图片读取失败');
+      toast(i18n('settings.bgApplyFailed'));
     }
   });
 }

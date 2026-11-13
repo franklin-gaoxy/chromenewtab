@@ -19,7 +19,7 @@ function exportData() {
     'qihang-nav-' + new Date().toISOString().slice(0, 10) + '.json',
     'application/json'
   );
-  toast('插件备份已导出');
+  toast(i18n('settings.exportDone'));
 }
 
 /* ---------------- 导出为浏览器书签（Netscape Bookmark File） ---------------- */
@@ -88,9 +88,9 @@ function buildBookmarksHtml(rootName) {
 }
 
 function exportBookmarks() {
-  const { html, folders, links } = buildBookmarksHtml('启航导航');
+  const { html, folders, links } = buildBookmarksHtml(i18n('app.brand'));
   if (!links) {
-    toast('当前没有可导出的站点');
+    toast(i18n('settings.noSites'));
     return;
   }
   downloadBlob(
@@ -98,7 +98,7 @@ function exportBookmarks() {
     'qihang-bookmarks-' + new Date().toISOString().slice(0, 10) + '.html',
     'text/html;charset=utf-8'
   );
-  toast('已导出 ' + folders + ' 个文件夹 / ' + links + ' 个书签');
+  toast(i18n('settings.bookmarksExported', { folders, links }));
 }
 
 async function importData(file) {
@@ -109,12 +109,13 @@ async function importData(file) {
     state = normalizeData(parsed);
     ui.page = 0;
     save();
+    applyLanguage(state.settings.lang);
     applySettings();
     renderAll();
     syncSettingsUI();
-    toast('导入成功，共 ' + totalItems() + ' 个站点');
+    toast(i18n('settings.importDone', { n: totalItems() }));
   } catch (e) {
-    toast('导入失败：文件格式不正确');
+    toast(i18n('settings.importFailed'));
   }
 }
 
@@ -127,19 +128,20 @@ function bindBackupEvents() {
     const file = e.target.files && e.target.files[0];
     e.target.value = '';
     if (!file) return;
-    if (!window.confirm('导入会覆盖当前全部分组与设置，确定继续？')) return;
+    if (!window.confirm(i18n('settings.importConfirm'))) return;
     await importData(file);
   });
 
   $('dataReset').addEventListener('click', () => {
-    if (!window.confirm('确定恢复默认数据吗？当前的分组和站点会被清空。')) return;
+    if (!window.confirm(i18n('settings.resetConfirm'))) return;
     state = normalizeData(defaultData());
     ui.page = 0;
     save();
+    applyLanguage(state.settings.lang);
     applySettings();
     renderAll();
     syncSettingsUI();
-    toast('已恢复默认');
+    toast(i18n('settings.resetDone'));
   });
 }
 

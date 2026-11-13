@@ -28,12 +28,12 @@
 </div>
 
 <!-- 左侧常驻分组栏 -->
-<aside class="rail" aria-label="分组">
+<aside class="rail" data-i18n-aria="rail.groups" aria-label="分组">
   <span class="rail-bg" aria-hidden="true"></span>
 
   <nav class="rail-groups" id="groupList"></nav>
 
-  <button class="rail-add" id="addGroup" title="新建分组">
+  <button class="rail-add" id="addGroup" data-i18n-title="rail.newGroup" title="新建分组">
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
     </svg>
@@ -42,30 +42,30 @@
 
 <!-- 主区域 -->
 <main class="stage">
-  <nav class="engines" id="engines" aria-label="搜索分类"></nav>
+  <nav class="engines" id="engines" data-i18n-aria="search.cats" aria-label="搜索分类"></nav>
 
   <form class="search" id="searchForm" autocomplete="off">
-    <button type="button" class="engine-pick" id="enginePick" title="切换搜索引擎">
+    <button type="button" class="engine-pick" id="enginePick" data-i18n-title="search.engineSwitch" title="切换搜索引擎">
       <span class="engine-badge" id="engineBadge">B</span>
       <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
-    <input id="searchInput" type="text" placeholder="输入并搜索，或筛选站点" spellcheck="false" autocomplete="off" />
-    <button type="button" class="clear-btn" id="clearBtn" hidden title="清空">
+    <input id="searchInput" type="text" data-i18n-ph="search.placeholder" placeholder="输入并搜索，或筛选站点" spellcheck="false" autocomplete="off" />
+    <button type="button" class="clear-btn" id="clearBtn" hidden data-i18n-title="search.clear" title="清空">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
     </button>
-    <button type="submit" class="search-go" title="搜索">
+    <button type="submit" class="search-go" data-i18n-title="search.go" title="搜索">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm5.5-1.5L21 21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
     </button>
   </form>
 
   <p class="filter-hint" id="filterHint" hidden></p>
 
-  <section class="grid" id="grid" aria-label="站点"></section>
+  <section class="grid" id="grid" data-i18n-aria="grid.sites" aria-label="站点"></section>
 
   <div class="empty" id="empty" hidden>
-    <p class="empty-title">这个分组还是空的</p>
-    <p class="empty-sub">点击下面的按钮，把常用网站加进来</p>
-    <button class="primary-btn" id="emptyAdd">添加网站</button>
+    <p class="empty-title" data-i18n="grid.emptyTitle">这个分组还是空的</p>
+    <p class="empty-sub" data-i18n="grid.emptySub">点击下面的按钮，把常用网站加进来</p>
+    <button class="primary-btn" id="emptyAdd" data-i18n="grid.addSite">添加网站</button>
   </div>
 
   <div class="dots" id="dots"></div>
@@ -76,32 +76,32 @@
 
 <!-- 文件夹面板（毛玻璃，只支持一层） -->
 <div class="folder-mask" id="folderMask" hidden>
-  <div class="folder-panel" id="folderPanel" role="dialog" aria-modal="true" aria-label="文件夹"></div>
+  <div class="folder-panel" id="folderPanel" role="dialog" aria-modal="true" data-i18n-aria="folder.title" aria-label="文件夹"></div>
 </div>
 
 <!-- 链接编辑弹窗 -->
 <div class="mask" id="linkMask" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="linkModalTitle">
     <header class="modal-head">
-      <h2 id="linkModalTitle">添加网站</h2>
-      <button class="icon-btn" data-close="linkMask" title="关闭">
+      <h2 id="linkModalTitle" data-i18n="link.addTitle">添加网站</h2>
+      <button class="icon-btn" data-close="linkMask" data-i18n-title="common.close" title="关闭">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
       </button>
     </header>
 
     <div class="modal-body">
       <label class="field">
-        <span class="field-label">名称</span>
-        <input id="fTitle" type="text" placeholder="例如：掘金" maxlength="24" />
+        <span class="field-label" data-i18n="link.name">名称</span>
+        <input id="fTitle" type="text" data-i18n-ph="link.namePh" placeholder="例如：掘金" maxlength="24" />
       </label>
 
       <label class="field">
-        <span class="field-label">网址</span>
-        <input id="fUrl" type="text" placeholder="例如：juejin.cn 或 https://juejin.cn" spellcheck="false" />
+        <span class="field-label" data-i18n="link.url">网址</span>
+        <input id="fUrl" type="text" data-i18n-ph="link.urlPh" placeholder="例如：juejin.cn 或 https://juejin.cn" spellcheck="false" />
       </label>
 
       <div class="field">
-        <span class="field-label">图标</span>
+        <span class="field-label" data-i18n="link.icon">图标</span>
         <div class="icon-row">
           <div class="icon-preview" id="iconPreview">
             <img id="iconPreviewImg" alt="" hidden />
@@ -109,18 +109,18 @@
           </div>
           <div class="icon-tools">
             <div class="icon-tools-line">
-              <button type="button" class="mini-btn primary" id="iconAuto">自动获取</button>
-              <button type="button" class="mini-btn" id="iconUploadBtn">上传图片</button>
-              <button type="button" class="mini-btn" id="letterIconBtn">文字图标</button>
+              <button type="button" class="mini-btn primary" id="iconAuto" data-i18n="link.iconAuto">自动获取</button>
+              <button type="button" class="mini-btn" id="iconUploadBtn" data-i18n="link.iconUpload">上传图片</button>
+              <button type="button" class="mini-btn" id="letterIconBtn" data-i18n="link.iconLetter">文字图标</button>
               <input id="iconUpload" type="file" accept="image/*" hidden />
             </div>
-            <input id="fIcon" type="text" placeholder="或粘贴图标地址（留空自动获取）" spellcheck="false" />
+            <input id="fIcon" type="text" data-i18n-ph="link.iconPh" placeholder="或粘贴图标地址（留空自动获取）" spellcheck="false" />
           </div>
         </div>
         <div class="letter-icon-panel" id="letterIconPanel" hidden>
           <div class="letter-icon-row">
-            <input id="letterIconText" type="text" maxlength="12" placeholder="输入 1~6 个字或字母，4 字以上自动两行" spellcheck="false" />
-            <button type="button" class="mini-btn" id="letterIconShuffle">换色</button>
+            <input id="letterIconText" type="text" maxlength="12" data-i18n-ph="link.letterPh" placeholder="输入 1~6 个字或字母，4 字以上自动两行" spellcheck="false" />
+            <button type="button" class="mini-btn" id="letterIconShuffle" data-i18n="link.shuffle">换色</button>
           </div>
           <div class="letter-icon-row">
             <div class="letter-icon-colors" id="letterIconColors"></div>
@@ -131,16 +131,16 @@
       </div>
 
       <label class="field" id="fGroupField">
-        <span class="field-label">所属分组</span>
+        <span class="field-label" data-i18n="link.group">所属分组</span>
         <select id="fGroup"></select>
       </label>
     </div>
 
     <footer class="modal-foot">
-      <button class="ghost-btn danger" id="fDelete" hidden>删除</button>
+      <button class="ghost-btn danger" id="fDelete" data-i18n="common.delete" hidden>删除</button>
       <div class="spacer"></div>
-      <button class="ghost-btn" data-close="linkMask">取消</button>
-      <button class="primary-btn" id="fSave">保存</button>
+      <button class="ghost-btn" data-close="linkMask" data-i18n="common.cancel">取消</button>
+      <button class="primary-btn" id="fSave" data-i18n="common.save">保存</button>
     </footer>
   </div>
 </div>
@@ -149,180 +149,189 @@
 <div class="drawer-mask" id="settingsMask" hidden>
   <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
     <header class="drawer-head">
-      <h2 id="settingsTitle">设置</h2>
-      <button class="icon-btn" data-close="settingsMask" title="关闭">
+      <h2 id="settingsTitle" data-i18n="settings.title">设置</h2>
+      <button class="icon-btn" data-close="settingsMask" data-i18n-title="common.close" title="关闭">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
       </button>
     </header>
 
     <div class="drawer-body">
+      <section class="setting-block" data-section="lang">
+        <h3 data-i18n="settings.language">语言</h3>
+        <div class="chips" id="langChips"></div>
+        <p class="tip" data-i18n="settings.languageTip">切换后界面立即生效，数据与图标不受影响。</p>
+      </section>
+
       <section class="setting-block" data-section="engine">
-        <h3>搜索引擎</h3>
+        <h3 data-i18n="settings.engine">搜索引擎</h3>
         <div class="chips" id="engineChips"></div>
       </section>
 
       <section class="setting-block" data-section="bg">
-        <h3>背景</h3>
+        <h3 data-i18n="settings.bg">背景</h3>
         <div class="chips bg-chips" id="bgChips"></div>
         <div class="inline-row">
-          <input id="bgUrl" type="text" placeholder="粘贴图片链接，例如 https://.../wallpaper.jpg" spellcheck="false" />
-          <button class="mini-btn" id="bgApplyUrl">应用</button>
-          <button class="mini-btn" id="bgUploadBtn">本地图片</button>
+          <input id="bgUrl" type="text" data-i18n-ph="settings.bgUrlPh" placeholder="粘贴图片链接，例如 https://.../wallpaper.jpg" spellcheck="false" />
+          <button class="mini-btn" id="bgApplyUrl" data-i18n="settings.apply">应用</button>
+          <button class="mini-btn" id="bgUploadBtn" data-i18n="settings.localImage">本地图片</button>
           <input id="bgUpload" type="file" accept="image/*" hidden />
         </div>
       </section>
 
       <section class="setting-block" data-section="behavior">
-        <h3>行为</h3>
+        <h3 data-i18n="settings.behavior">行为</h3>
         <label class="switch-row">
-          <span>在新标签页中打开链接</span>
+          <span data-i18n="settings.openInNewTab">在新标签页中打开链接</span>
           <input type="checkbox" id="optNewTab" />
           <i class="switch"></i>
         </label>
         <label class="switch-row">
-          <span>图标下方显示名称</span>
+          <span data-i18n="settings.showLabels">图标下方显示名称</span>
           <input type="checkbox" id="optLabels" />
           <i class="switch"></i>
         </label>
         <label class="switch-row">
-          <span>图标使用统一底色与边框</span>
+          <span data-i18n="settings.iconFrame">图标使用统一底色与边框</span>
           <input type="checkbox" id="optIconFrame" />
           <i class="switch"></i>
         </label>
-        <p class="tip">关闭后图标按原始形状铺满，不再有统一底板、边框和投影，接近站点自身的 logo 效果。</p>
+        <p class="tip" data-i18n="settings.iconFrameTip">关闭后图标按原始形状铺满，不再有统一底板、边框和投影，接近站点自身的 logo 效果。</p>
 
       </section>
 
       <section class="setting-block" data-section="layout">
-        <h3>布局</h3>
+        <h3 data-i18n="settings.layout">布局</h3>
 
-        <p class="sub-label">每行图标数量</p>
+        <p class="sub-label" data-i18n="settings.perRow">每行图标数量</p>
         <div class="inline-row">
           <input id="optPerRow" type="number" min="3" max="8" step="1" value="8" />
         </div>
 
-        <p class="sub-label">图标大小</p>
+        <p class="sub-label" data-i18n="settings.iconSize">图标大小</p>
         <div class="inline-row">
           <input id="optIconSize" type="range" min="40" max="88" step="2" value="60" />
           <span class="slider-val" id="optIconSizeVal">60px</span>
         </div>
 
-        <p class="sub-label">名称字号</p>
+        <p class="sub-label" data-i18n="settings.labelSize">名称字号</p>
         <div class="inline-row">
           <input id="optLabelSize" type="range" min="10" max="18" step="0.5" value="12.5" />
           <span class="slider-val" id="optLabelSizeVal">12.5px</span>
         </div>
 
-        <p class="sub-label">网格对齐</p>
+        <p class="sub-label" data-i18n="settings.align">网格对齐</p>
         <div class="chips" id="alignChips"></div>
 
-        <p class="sub-label">书签按钮位置</p>
+        <p class="sub-label" data-i18n="settings.bmPos">书签按钮位置</p>
         <div class="chips" id="bmPosChips"></div>
 
-        <p class="tip">每行数量可在 3 ~ 8 之间调整，同时决定每页的图标总数（每页固定 3 行）。图标大小范围 40 ~ 88px，名称字号范围 10 ~ 18px，拖动即时预览。书签按钮位置指屏幕右侧悬浮按钮在高度上的位置（整屏三等份）。</p>
+        <p class="tip" data-i18n="settings.layoutTip">每行数量可在 3 ~ 8 之间调整，同时决定每页的图标总数（每页固定 3 行）。图标大小范围 40 ~ 88px，名称字号范围 10 ~ 18px，拖动即时预览。书签按钮位置指屏幕右侧悬浮按钮在高度上的位置（整屏三等份）。</p>
       </section>
 
       <section class="setting-block" data-section="sync">
-        <h3>远程同步</h3>
+        <h3 data-i18n="settings.sync">远程同步</h3>
 
         <div id="syncGuest">
           <div class="inline-row">
-            <input id="syncServer" type="text" placeholder="服务器地址，例如 http://localhost:8787" spellcheck="false" />
+            <input id="syncServer" type="text" data-i18n-ph="settings.syncServerPh" placeholder="服务器地址，例如 http://localhost:8787" spellcheck="false" />
           </div>
           <div class="inline-row">
-            <input id="syncUserInput" type="text" placeholder="用户名" spellcheck="false" autocomplete="off" />
-            <input id="syncPassInput" type="password" placeholder="密码" autocomplete="off" />
+            <input id="syncUserInput" type="text" data-i18n-ph="settings.username" placeholder="用户名" spellcheck="false" autocomplete="off" />
+            <input id="syncPassInput" type="password" data-i18n-ph="settings.password" placeholder="密码" autocomplete="off" />
           </div>
           <div class="inline-row">
-            <button class="mini-btn primary" id="syncLogin">登录</button>
-            <button class="mini-btn" id="syncRegister">注册</button>
+            <button class="mini-btn primary" id="syncLogin" data-i18n="settings.login">登录</button>
+            <button class="mini-btn" id="syncRegister" data-i18n="settings.register">注册</button>
           </div>
-          <p class="tip">使用 QSP v1 协议，接口说明见 <a href="#" class="doc-link" id="protocolDocLink">《QSP 协议文档》</a>；仓库内 server/ 提供了示例服务端。</p>
+          <p class="tip" data-i18n-html="settings.protocolTip">使用 QSP v1 协议，接口说明见 <a href="#" class="doc-link" id="protocolDocLink">《QSP 协议文档》</a>；仓库内 server/ 提供了示例服务端。</p>
         </div>
 
         <div id="syncUserBox" hidden>
-          <p class="sync-line">已登录：<strong id="syncAccount">-</strong></p>
+          <p class="sync-line" data-i18n-html="settings.loggedIn">已登录：<strong id="syncAccount">-</strong></p>
           <p class="sync-line dim" id="syncServerLabel">-</p>
           <div class="inline-row">
-            <button class="mini-btn primary" id="syncUpload">上传到服务器</button>
-            <button class="mini-btn" id="syncDownload">从服务器恢复</button>
-            <button class="mini-btn" id="syncMerge">智能合并</button>
+            <button class="mini-btn primary" id="syncUpload" data-i18n="settings.syncUpload">上传到服务器</button>
+            <button class="mini-btn" id="syncDownload" data-i18n="settings.syncDownload">从服务器恢复</button>
+            <button class="mini-btn" id="syncMerge" data-i18n="settings.syncMerge">智能合并</button>
           </div>
           <div class="inline-row">
-            <button class="mini-btn danger" id="syncLogout">退出登录</button>
+            <button class="mini-btn danger" id="syncLogout" data-i18n="settings.syncLogout">退出登录</button>
           </div>
           <p class="tip" id="syncStatus">尚未同步</p>
         </div>
       </section>
 
       <section class="setting-block" data-section="data">
-        <h3>备份与恢复</h3>
+        <h3 data-i18n="settings.data">备份与恢复</h3>
 
-        <p class="sub-label">插件备份（JSON）</p>
+        <p class="sub-label" data-i18n="settings.pluginBackup">插件备份（JSON）</p>
         <div class="inline-row">
-          <button class="mini-btn" id="dataExport">导出备份</button>
-          <button class="mini-btn" id="dataImportBtn">导入备份</button>
+          <button class="mini-btn" id="dataExport" data-i18n="settings.export">导出备份</button>
+          <button class="mini-btn" id="dataImportBtn" data-i18n="settings.import">导入备份</button>
           <input id="dataImport" type="file" accept="application/json,.json" hidden />
         </div>
-        <p class="tip">包含全部分组、站点与偏好设置；在另一台机器的同一扩展中「导入备份」即可完整恢复。</p>
+        <p class="tip" data-i18n="settings.backupTip">包含全部分组、站点与偏好设置；在另一台机器的同一扩展中「导入备份」即可完整恢复。</p>
 
-        <p class="sub-label">定时备份</p>
+        <p class="sub-label" data-i18n="settings.autoBackup">定时备份</p>
         <label class="switch-row">
-          <span>启用定时备份</span>
+          <span data-i18n="settings.autoBackupEnable">启用定时备份</span>
           <input type="checkbox" id="autoBackupEnabled" />
           <i class="switch"></i>
         </label>
 
         <div id="autoBackupBody" hidden>
-          <p class="sub-label">每天执行时间</p>
+          <p class="sub-label" data-i18n="settings.autoBackupTime">每天执行时间</p>
           <div class="inline-row">
             <input id="autoBackupTime" type="time" step="60" />
           </div>
 
-          <p class="sub-label">保存位置</p>
+          <p class="sub-label" data-i18n="settings.autoBackupWhere">保存位置</p>
           <div class="chips" id="autoBackupModeChips"></div>
           <p class="tip" id="autoBackupDirLabel">默认位置：浏览器下载目录 → qihang-backup 文件夹</p>
-          <p class="tip">下载目录就是 Chrome 保存下载文件的那个文件夹，Windows 上通常是 C:\Users\你的用户名\Downloads，可在 chrome://settings/downloads 查看或修改。想放到 C 盘其他位置，点「自定义目录」选过去即可。</p>
+          <p class="tip" data-i18n="settings.autoBackupDlTip">下载目录就是 Chrome 保存下载文件的那个文件夹，Windows 上通常是 C:\Users\你的用户名\Downloads，可在 chrome://settings/downloads 查看或修改。想放到 C 盘其他位置，点「自定义目录」选过去即可。</p>
 
-          <p class="sub-label">保留天数</p>
+          <p class="sub-label" data-i18n="settings.autoBackupKeep">保留天数</p>
           <div class="inline-row">
             <input id="autoBackupKeepDays" type="number" min="0" max="365" step="1" />
           </div>
-          <p class="tip">0 表示永久保留。两种位置都会按天数自动清理过期备份：默认位置清理「下载目录/qihang-backup」下的文件（需保留对应的下载记录），自定义目录直接删除文件。</p>
+          <p class="tip" data-i18n="settings.autoBackupKeepTip">0 表示永久保留。两种位置都会按天数自动清理过期备份：默认位置清理「下载目录/qihang-backup」下的文件（需保留对应的下载记录），自定义目录直接删除文件。</p>
 
           <div class="inline-row">
-            <button class="mini-btn" id="autoBackupNow">立即备份一次</button>
-            <button class="mini-btn" id="autoBackupOpenDir">打开下载目录</button>
-            <button class="mini-btn" id="autoBackupReauth" hidden>重新授权目录</button>
+            <button class="mini-btn" id="autoBackupNow" data-i18n="settings.autoBackupNow">立即备份一次</button>
+            <button class="mini-btn" id="autoBackupOpenDir" data-i18n="settings.autoBackupOpenDir">打开下载目录</button>
+            <button class="mini-btn" id="autoBackupReauth" data-i18n="settings.autoBackupReauth" hidden>重新授权目录</button>
           </div>
           <p class="tip" id="autoBackupStatus">尚未执行</p>
         </div>
 
-        <p class="sub-label">浏览器书签（HTML）</p>
+        <p class="sub-label" data-i18n="settings.bookmarkHtml">浏览器书签（HTML）</p>
         <div class="inline-row">
-          <button class="mini-btn" id="dataExportBookmarks">导出浏览器书签</button>
+          <button class="mini-btn" id="dataExportBookmarks" data-i18n="settings.exportBookmarks">导出浏览器书签</button>
         </div>
-        <p class="tip">
+        <p class="tip" data-i18n="settings.bookmarkTip">
           生成标准 Netscape 书签文件，所有站点收纳在「启航导航」文件夹内。在 Chrome 书签管理器右上角 ⋮ → 导入书签，选择该文件即可，书签栏只会多出一个目录。
         </p>
 
-        <p class="sub-label">危险操作</p>
+        <p class="sub-label" data-i18n="settings.danger">危险操作</p>
         <div class="inline-row">
-          <button class="mini-btn danger" id="dataReset">恢复默认</button>
+          <button class="mini-btn danger" id="dataReset" data-i18n="settings.reset">恢复默认</button>
         </div>
-        <p class="tip">导航数据保存在本机浏览器中；开启远程同步后才会发送到你自己的服务器。</p>
+        <p class="tip" data-i18n="settings.privacyTip">导航数据保存在本机浏览器中；开启远程同步后才会发送到你自己的服务器。</p>
       </section>
     </div>
 
     <footer class="drawer-foot">
       <span class="version">启航 · v1.2.0</span>
       <div class="spacer"></div>
-      <button class="primary-btn" data-close="settingsMask">完成</button>
+      <button class="primary-btn" data-close="settingsMask" data-i18n="common.done">完成</button>
     </footer>
   </aside>
 </div>
 
 <div class="toast" id="toast" hidden></div>
+
+<!-- 界面文案：必须最先加载，其它模块运行期会调用 i18n() -->
+<script src="js/core/i18n.js"></script>
 
 <script src="js/store.js"></script>
 

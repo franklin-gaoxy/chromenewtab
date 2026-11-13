@@ -85,11 +85,16 @@ function createWidgetTile(item, groupId, searching, index) {
       def.mount(tile, ctx);
     } catch (e) {
       console.error('[widget] mount failed:', item.widget, e);
-      tile.innerHTML = '<div class="tile-icon">!</div><div class="tile-name">组件出错</div>';
+      tile.innerHTML =
+        '<div class="tile-icon">!</div><div class="tile-name">' +
+        esc(i18n('widget.error')) +
+        '</div>';
     }
   } else {
     tile.innerHTML =
-      '<div class="tile-icon">?</div><div class="tile-name">未知组件</div>';
+      '<div class="tile-icon">?</div><div class="tile-name">' +
+      esc(i18n('widget.unknown')) +
+      '</div>';
   }
 
   attachTileDrag(tile, item, groupId, searching);
@@ -106,7 +111,7 @@ function createWidgetTile(item, groupId, searching, index) {
     const more = document.createElement('button');
     more.type = 'button';
     more.className = 'tile-more';
-    more.title = '更多操作';
+    more.title = i18n('common.more');
     more.innerHTML = ICONS.more;
     more.addEventListener('click', (e) => {
       e.stopPropagation();

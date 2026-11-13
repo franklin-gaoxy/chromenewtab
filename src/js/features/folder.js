@@ -46,7 +46,7 @@ function mergeItems(fromGroupId, fromId, toGroupId, toId) {
 
   const incoming = folderSitesOf(from);
   if (!incoming.length) {
-    toast('这个文件夹还是空的');
+    toast(i18n('folder.empty'));
     return;
   }
 
@@ -62,16 +62,19 @@ function mergeItems(fromGroupId, fromId, toGroupId, toId) {
 
   if (to.kind === 'folder') {
     to.items.push(...incoming);
-    toast('已放入「' + to.title + '」');
+    toast(i18n('folder.movedIn', { name: to.title }));
   } else {
     const folder = {
       id: uid('f'),
       kind: 'folder',
-      title: uniqueFolderTitle(toGroup, from.kind === 'folder' ? from.title : '文件夹'),
+      title: uniqueFolderTitle(
+        toGroup,
+        from.kind === 'folder' ? from.title : i18n('folder.newName')
+      ),
       items: [to].concat(incoming)
     };
     toGroup.items.splice(at, 1, folder);
-    toast('已合并为文件夹');
+    toast(i18n('folder.merged'));
   }
 
   save();
@@ -101,7 +104,7 @@ function createFolderTile(item, groupId, searching, index) {
     const more = document.createElement('button');
     more.type = 'button';
     more.className = 'tile-more';
-    more.title = '更多操作';
+    more.title = i18n('common.more');
     more.innerHTML = ICONS.more;
     more.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -231,7 +234,7 @@ function buildFolderHead(folder) {
   const close = document.createElement('button');
   close.type = 'button';
   close.className = 'folder-close';
-  close.title = '关闭';
+  close.title = i18n('common.close');
   close.innerHTML =
     '<svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
   close.addEventListener('click', closeFolder);
@@ -248,7 +251,7 @@ function buildFolderFilter() {
   const input = document.createElement('input');
   input.type = 'text';
   input.className = 'folder-filter-input';
-  input.placeholder = '在文件夹内搜索';
+  input.placeholder = i18n('folder.searchPh');
   input.value = openFolderRef.filter || '';
   input.spellcheck = false;
   input.autocomplete = 'off';
@@ -327,7 +330,7 @@ function buildFolderGrid(folder) {
   if (!sites.length) {
     const tip = document.createElement('p');
     tip.className = 'folder-empty-tip';
-    tip.textContent = query ? '没有匹配的站点' : '这个文件夹还是空的';
+    tip.textContent = query ? i18n('folder.noMatch') : i18n('folder.empty');
     grid.appendChild(tip);
   }
 
@@ -336,7 +339,7 @@ function buildFolderGrid(folder) {
   add.className = 'f-item f-add';
   add.innerHTML =
     '<span class="f-item-icon">' + ICONS.plus + '</span>' +
-    '<span class="f-item-name">添加网站</span>';
+    '<span class="f-item-name">' + esc(i18n('folder.addSite')) + '</span>';
   add.addEventListener('click', () => {
     openLinkModal({ groupId: openFolderRef.groupId, folderId: folder.id });
   });
@@ -348,11 +351,20 @@ function buildFolderGrid(folder) {
 /* ---------------- 菜单与文件夹操作 ---------------- */
 function openFolderMenu(event, groupId, folder) {
   showMenu(event, [
-    { label: '打开', icon: ICONS.open, run: () => openFolderById(groupId, folder.id) },
-    { label: '重命名', icon: ICONS.rename, run: () => renameFolder(groupId, folder.id) },
+    { label: i18n('menu.open'), icon: ICONS.open, run: () => openFolderById(groupId, folder.id) },
+    { label: i18n('folder.rename'), icon: ICONS.rename, run: () => renameFolder(groupId, folder.id) },
     { sep: true },
-    { label: '解散文件夹', icon: ICONS.unfold, run: () => dissolveFolder(groupId, folder.id) },
-    { label: '删除文件夹', icon: ICONS.trash, danger: true, run: () => removeFolder(groupId, folder.id) }
+    {
+      label: i18n('folder.dissolve'),
+      icon: ICONS.unfold,
+      run: () => dissolveFolder(groupId, folder.id)
+    },
+    {
+      label: i18n('folder.delete'),
+      icon: ICONS.trash,
+      danger: true,
+      run: () => removeFolder(groupId, folder.id)
+    }
   ]);
 }
 
@@ -360,16 +372,21 @@ function openFolderItemMenu(event, folder, site) {
   const group = groupOfFolder(folder.id);
   const groupId = group ? group.id : currentGroup().id;
   showMenu(event, [
-    { label: '打开', icon: ICONS.open, run: () => openUrl(site.url) },
-    { label: '复制链接', icon: ICONS.copy, run: () => copyText(site.url) },
+    { label: i18n('menu.open'), icon: ICONS.open, run: () => openUrl(site.url) },
+    { label: i18n('menu.copyUrl'), icon: ICONS.copy, run: () => copyText(site.url) },
     { sep: true },
     {
-      label: '编辑',
+      label: i18n('menu.edit'),
       icon: ICONS.edit,
       run: () => openLinkModal({ groupId, item: site, folderId: folder.id })
     },
-    { label: '移出文件夹', icon: ICONS.unfold, run: () => moveOutOfFolder(folder.id, site.id) },
-    { label: '删除', icon: ICONS.trash, danger: true, run: () => removeItem(groupId, site.id) }
+    { label: i18n('folder.moveOut'), icon: ICONS.unfold, run: () => moveOutOfFolder(folder.id, site.id) },
+    {
+      label: i18n('menu.delete'),
+      icon: ICONS.trash,
+      danger: true,
+      run: () => removeItem(groupId, site.id)
+    }
   ]);
 }
 
@@ -392,7 +409,7 @@ function openFolderById(groupId, folderId) {
 function renameFolder(groupId, folderId) {
   const folder = findFolder(groupId, folderId);
   if (!folder) return;
-  const val = window.prompt('文件夹名称', folder.title);
+  const val = window.prompt(i18n('folder.renamePrompt'), folder.title);
   if (val === null) return;
   const name = val.trim();
   if (!name) return;
@@ -416,7 +433,7 @@ function dissolveFolder(groupId, folderId) {
   closeFolder();
   save();
   renderAll();
-  toast('已解散「' + folder.title + '」');
+  toast(i18n('folder.dissolved', { name: folder.title }));
 }
 
 function removeFolder(groupId, folderId) {
@@ -426,14 +443,14 @@ function removeFolder(groupId, folderId) {
   if (at < 0) return;
   const folder = group.items[at];
   const ask = folder.items.length
-    ? '删除文件夹「' + folder.title + '」及其中 ' + folder.items.length + ' 个站点？'
-    : '删除文件夹「' + folder.title + '」？';
+    ? i18n('folder.deleteConfirm', { name: folder.title, n: folder.items.length })
+    : i18n('folder.deleteConfirmEmpty', { name: folder.title });
   if (!window.confirm(ask)) return;
   group.items.splice(at, 1);
   closeFolder();
   save();
   renderAll();
-  toast('已删除文件夹');
+  toast(i18n('folder.deletedMsg'));
 }
 
 function moveOutOfFolder(folderId, siteId) {
@@ -448,7 +465,7 @@ function moveOutOfFolder(folderId, siteId) {
   group.items.splice(at + 1, 0, site);
   save();
   renderAll();
-  toast('已移出文件夹');
+  toast(i18n('folder.movedOut'));
 }
 
 /* ---------------- 事件绑定 ---------------- */

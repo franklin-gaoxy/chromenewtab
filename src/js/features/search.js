@@ -8,7 +8,8 @@ function renderEngines() {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'engine-tab' + (state.settings.cat === cat.key ? ' active' : '');
-    btn.textContent = cat.label;
+    const key = 'search.cat.' + cat.key;
+    btn.textContent = i18nHas(key) ? i18n(key) : cat.label;
     btn.addEventListener('click', () => {
       state.settings.cat = cat.key;
       save();
@@ -22,8 +23,7 @@ function renderSearchEngine() {
   const engine = ENGINES[state.settings.engine] || ENGINES.bing;
   const badge = $('engineBadge');
   badge.textContent = engine.badge;
-  $('searchInput').placeholder =
-    '输入并搜索，或筛选站点（' + engine.label + '）';
+  $('searchInput').placeholder = i18n('search.placeholderWith', { engine: engine.label });
 }
 
 

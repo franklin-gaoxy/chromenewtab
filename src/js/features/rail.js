@@ -16,6 +16,32 @@ function groupIcon(index) {
   return GROUP_ICONS[index % GROUP_ICONS.length];
 }
 
+/* 正在拖拽的分组 id（分组排序用；与磁贴拖拽的 dragState 互斥） */
+let railDragId = null;
+
+/* 落点在目标项的上半还是下半（决定插到前面还是后面） */
+function railDropAfter(node, event) {
+  const rect = node.getBoundingClientRect();
+  return event.clientY > rect.top + rect.height / 2;
+}
+
+/* 分组排序：把 fromId 插到 toId 前 / 后 */
+function moveGroup(fromId, toId, after) {
+  if (!fromId || !toId || fromId === toId) return;
+  const from = state.groups.findIndex((g) => g.id === fromId);
+  if (from < 0) return;
+
+  const [group] = state.groups.splice(from, 1);
+  // 摘除后再找目标，避免同侧移动时下标错位
+  let at = state.groups.findIndex((g) => g.id === toId);
+  if (at < 0) at = state.groups.length;
+  else if (after) at += 1;
+  state.groups.splice(at, 0, group);
+
+  save();
+  renderAll();
+}
+
 function renderSidebar() {
   const wrap = $('groupList');
   wrap.innerHTML = '';
@@ -25,7 +51,8 @@ function renderSidebar() {
     node.type = 'button';
     node.className = 'rail-item' + (g.id === state.activeGroupId ? ' active' : '');
     node.dataset.id = g.id;
-    node.title = g.name + ' · ' + g.items.length + ' 个站点';
+    node.title = i18n('rail.itemTitle', { name: g.name, n: g.items.length });
+    node.draggable = true;
     node.innerHTML =
       '<span class="rail-icon">' + groupIcon(index) + '</span>' +
       '<span class="rail-label">' + esc(g.name) + '</span>';
@@ -35,13 +62,57 @@ function renderSidebar() {
       selectGroup(g.id);
     });
 
+    /* 拖动分组项：调整分组顺序（重命名输入框内不触发） */
+    node.addEventListener('dragstart', (e) => {
+      if (node.classList.contains('editing')) {
+        e.preventDefault();
+        return;
+      }
+      railDragId = g.id;
+      node.classList.add('rail-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      try {
+        e.dataTransfer.setData('text/plain', g.id);
+      } catch (err) { /* ignore */ }
+    });
+    node.addEventListener('dragend', () => {
+      railDragId = null;
+      node.classList.remove('rail-dragging');
+      wrap
+        .querySelectorAll('.drop-before, .drop-after, .drop-target')
+        .forEach((n) => n.classList.remove('drop-before', 'drop-after', 'drop-target'));
+    });
+
     node.addEventListener('dragover', (e) => {
+      // 1) 拖分组：显示插入位置的粗线
+      if (railDragId) {
+        if (railDragId === g.id) return;
+        e.preventDefault();
+        const after = railDropAfter(node, e);
+        node.classList.toggle('drop-after', after);
+        node.classList.toggle('drop-before', !after);
+        return;
+      }
+      // 2) 拖磁贴：高亮分组表示「放到这个分组」
       if (!dragState) return;
       e.preventDefault();
       if (g.id !== state.activeGroupId) node.classList.add('drop-target');
     });
-    node.addEventListener('dragleave', () => node.classList.remove('drop-target'));
+    node.addEventListener('dragleave', () => {
+      node.classList.remove('drop-before', 'drop-after', 'drop-target');
+    });
     node.addEventListener('drop', (e) => {
+      // 拖分组 → 排序
+      if (railDragId) {
+        e.preventDefault();
+        const after = node.classList.contains('drop-after');
+        const from = railDragId;
+        railDragId = null;
+        node.classList.remove('drop-before', 'drop-after');
+        moveGroup(from, g.id, after);
+        return;
+      }
+      // 拖磁贴 → 移动到该分组
       e.preventDefault();
       node.classList.remove('drop-target');
       if (!dragState) return;
@@ -51,7 +122,7 @@ function renderSidebar() {
       if (idx < 0) return;
       const [item] = from.items.splice(idx, 1);
       g.items.unshift(item);
-      toast('已移动到「' + g.name + '」');
+      toast(i18n('rail.moved', { name: g.name }));
       save();
       renderAll();
     });
@@ -100,7 +171,7 @@ function startRename(g, node) {
 }
 
 function createGroup() {
-  const g = { id: uid('g'), name: '新分组', items: [] };
+  const g = { id: uid('g'), name: i18n('rail.defaultName'), items: [] };
   state.groups.push(g);
   state.activeGroupId = g.id;
   ui.page = 0;

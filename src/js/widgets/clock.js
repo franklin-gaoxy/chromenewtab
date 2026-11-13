@@ -20,7 +20,6 @@ WidgetRegistry.register({
 
     const timeNode = el.querySelector('.clock-time');
     const dateNode = el.querySelector('.clock-date');
-    const WEEK = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
     function tick() {
       const now = new Date();
@@ -29,8 +28,12 @@ WidgetRegistry.register({
       const ss = String(now.getSeconds()).padStart(2, '0');
       timeNode.textContent = hh + ':' + mm;
       timeNode.title = hh + ':' + mm + ':' + ss;
-      dateNode.textContent =
-        now.getMonth() + 1 + '月' + now.getDate() + '日 ' + WEEK[now.getDay()];
+      // 星期与日期格式跟随界面语言
+      dateNode.textContent = i18n('widget.dateFmt', {
+        m: now.getMonth() + 1,
+        d: now.getDate(),
+        w: i18n('widget.week' + now.getDay())
+      });
     }
 
     tick();

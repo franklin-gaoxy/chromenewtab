@@ -43,8 +43,10 @@ function ensureBookmarkPanel() {
   handle.type = 'button';
   handle.className = 'bm-handle';
   handle.id = 'bmHandle';
-  handle.title = '浏览器书签';
-  handle.setAttribute('aria-label', '打开浏览器书签');
+  handle.dataset.i18nTitle = 'bm.title';
+  handle.dataset.i18nAria = 'bm.handleAria';
+  handle.title = i18n('bm.title');
+  handle.setAttribute('aria-label', i18n('bm.handleAria'));
   handle.innerHTML = BM_ICON_BOOKMARK;
   handle.addEventListener('click', () => {
     const panel = $('bmPanel');
@@ -57,27 +59,29 @@ function ensureBookmarkPanel() {
   panel.className = 'bm-panel';
   panel.id = 'bmPanel';
   panel.hidden = true;
-  panel.setAttribute('aria-label', '浏览器书签');
+  panel.dataset.i18nAria = 'bm.title';
+  panel.setAttribute('aria-label', i18n('bm.title'));
   panel.innerHTML =
-    '<div class="bm-resizer" id="bmResizer" title="拖动调整宽度"></div>' +
+    '<div class="bm-resizer" id="bmResizer" data-i18n-title="bm.resize" title="拖动调整宽度"></div>' +
     '<header class="bm-head">' +
-      '<div class="bm-head-title">' + BM_ICON_BOOKMARK + '<h2>浏览器书签</h2></div>' +
+      '<div class="bm-head-title">' + BM_ICON_BOOKMARK + '<h2 data-i18n="bm.title">浏览器书签</h2></div>' +
       '<div class="bm-head-actions">' +
-        '<button class="bm-icon-btn" id="bmRefresh" type="button" title="刷新书签">' + ICONS.refresh + '</button>' +
-        '<button class="bm-icon-btn" id="bmClose" type="button" title="关闭">' + BM_ICON_CLOSE + '</button>' +
+        '<button class="bm-icon-btn" id="bmRefresh" type="button" data-i18n-title="bm.refresh" title="刷新书签">' + ICONS.refresh + '</button>' +
+        '<button class="bm-icon-btn" id="bmClose" type="button" data-i18n-title="common.close" title="关闭">' + BM_ICON_CLOSE + '</button>' +
       '</div>' +
     '</header>' +
     '<div class="bm-tools" id="bmTools">' +
       '<div class="bm-search-box">' +
         BM_ICON_SEARCH +
-        '<input id="bmSearch" type="text" placeholder="搜索书签（支持模糊匹配）" spellcheck="false" autocomplete="off" />' +
-        '<button class="bm-search-clear" id="bmSearchClear" type="button" title="清空" hidden>' + BM_ICON_CLOSE + '</button>' +
+        '<input id="bmSearch" type="text" data-i18n-ph="bm.searchPh" placeholder="搜索书签（支持模糊匹配）" spellcheck="false" autocomplete="off" />' +
+        '<button class="bm-search-clear" id="bmSearchClear" type="button" data-i18n-title="search.clear" title="清空" hidden>' + BM_ICON_CLOSE + '</button>' +
       '</div>' +
     '</div>' +
     '<div class="bm-body" id="bmBody"></div>' +
     '<div class="bm-sync" id="bmSync" hidden></div>';
 
   document.body.appendChild(panel);
+  applyI18n(panel);
 
   $('bmClose').addEventListener('click', closeBookmarkPanel);
   $('bmRefresh').addEventListener('click', () => {
@@ -136,7 +140,7 @@ function openBookmarkPanel(syncMode) {
   if (!panel) return;
 
   if (!bookmarksAvailable()) {
-    toast('浏览器书签仅在扩展环境中可用');
+    toast(i18n('bm.extOnly'));
     return;
   }
 
@@ -166,13 +170,14 @@ async function refreshBookmarkTree() {
   if (!body || bmLoading) return;
 
   bmLoading = true;
-  body.innerHTML = '<p class="bm-empty">正在读取书签…</p>';
+  body.innerHTML = '<p class="bm-empty">' + esc(i18n('bm.loading')) + '</p>';
 
   try {
     bmTree = await chrome.bookmarks.getTree();
   } catch (e) {
     bmLoading = false;
-    body.innerHTML = '<p class="bm-empty">读取书签失败：' + esc(e && e.message) + '</p>';
+    body.innerHTML =
+      '<p class="bm-empty">' + esc(i18n('bm.loadFailed', { msg: e && e.message })) + '</p>';
     return;
   }
 
@@ -200,7 +205,7 @@ function renderBookmarkTree() {
     const matches = [];
     bmCollectMatches(bmTree[0], query, [], matches);
     if (!matches.length) {
-      body.innerHTML = '<p class="bm-empty">没有匹配的书签</p>';
+      body.innerHTML = '<p class="bm-empty">' + esc(i18n('bm.noMatch')) + '</p>';
       return;
     }
     const list = document.createElement('div');
@@ -210,7 +215,7 @@ function renderBookmarkTree() {
     if (matches.length > 150) {
       const more = document.createElement('p');
       more.className = 'bm-more';
-      more.textContent = '还有 ' + (matches.length - 150) + ' 条结果，请继续输入以缩小范围';
+      more.textContent = i18n('bm.moreResults', { n: matches.length - 150 });
       body.appendChild(more);
     }
     return;
@@ -239,7 +244,7 @@ function bmTreeNode(node, depth) {
   head.innerHTML =
     '<span class="bm-arrow' + (open ? ' open' : '') + '">' + BM_ICON_ARROW + '</span>' +
     '<span class="bm-folder-icon">' + BM_ICON_FOLDER + '</span>' +
-    '<span class="bm-folder-name">' + esc(node.title || '未命名') + '</span>' +
+    '<span class="bm-folder-name">' + esc(node.title || i18n('common.unnamed')) + '</span>' +
     '<span class="bm-count">' + ((node.children && node.children.length) || 0) + '</span>';
 
   head.addEventListener('click', () => {
@@ -311,7 +316,7 @@ function bmCollectMatches(node, query, path, out) {
       }
       return;
     }
-    bmCollectMatches(child, query, path.concat(child.title || '未命名'), out);
+    bmCollectMatches(child, query, path.concat(child.title || i18n('common.unnamed')), out);
   });
 
   return out;
@@ -336,7 +341,7 @@ function bmFolderOptions() {
   const walk = (node, depth) => {
     if (node.url) return;
     if (node.id !== '0') {
-      out.push({ id: node.id, title: node.title || '未命名', depth });
+      out.push({ id: node.id, title: node.title || i18n('common.unnamed'), depth });
     }
     (node.children || []).forEach((child) => walk(child, node.id === '0' ? depth : depth + 1));
   };

@@ -5,7 +5,7 @@
 
 function aiEndpoint(model) {
   let base = String((model && model.base) || '').trim().replace(/\/+$/, '');
-  if (!base) throw new Error('模型接口地址为空');
+  if (!base) throw new Error(i18n('ai.noBase'));
   if (/\/chat\/completions$/.test(base)) return base;
   return base + '/chat/completions';
 }
@@ -33,7 +33,7 @@ async function aiChatCompletion(options) {
   const url = aiEndpoint(model);
 
   const granted = await aiEnsurePermission(url);
-  if (!granted) throw new Error('未授权访问该接口地址，请在弹窗中允许');
+  if (!granted) throw new Error(i18n('ai.noPermission'));
 
   const headers = { 'Content-Type': 'application/json' };
   if (model.key) headers.Authorization = 'Bearer ' + model.key;
@@ -56,7 +56,7 @@ async function aiChatCompletion(options) {
   try {
     res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
   } catch (e) {
-    throw new Error('网络请求失败，请检查接口地址或网络');
+    throw new Error(i18n('ai.network'));
   }
 
   const text = await res.text();
@@ -71,7 +71,7 @@ async function aiChatCompletion(options) {
     const msg =
       (payload && payload.error && payload.error.message) ||
       (payload && payload.message) ||
-      '请求失败（HTTP ' + res.status + '）';
+      i18n('ai.httpFail', { status: res.status });
     throw new Error(msg);
   }
 
@@ -82,7 +82,7 @@ async function aiChatCompletion(options) {
     payload.choices[0].message &&
     payload.choices[0].message.content;
 
-  if (!content) throw new Error('接口没有返回内容');
+  if (!content) throw new Error(i18n('ai.emptyReply'));
   return String(content);
 }
 

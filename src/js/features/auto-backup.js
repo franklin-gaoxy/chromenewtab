@@ -169,7 +169,7 @@ function autoBackupOpenFolder() {
     chrome.downloads.showDefaultFolder();
     return;
   }
-  toast('当前环境无法打开下载目录');
+  toast(i18n('settings.openDirFail'));
 }
 
 /* ---------------- 执行一次备份 ---------------- */
@@ -187,9 +187,9 @@ async function runAutoBackup(manual) {
   try {
     if ((s.autoBackupMode || 'default') === 'custom') {
       const handle = await autoBackupLoadHandle();
-      if (!handle) throw new Error('尚未选择备份目录');
+      if (!handle) throw new Error(i18n('settings.noDir'));
       const perm = await handle.queryPermission({ mode: 'readwrite' });
-      if (perm !== 'granted') throw new Error('备份目录需要重新授权，请点「重新授权目录」');
+      if (perm !== 'granted') throw new Error(i18n('settings.dirReauth'));
 
       const fileHandle = await handle.getFileHandle(name, { create: true });
       const writable = await fileHandle.createWritable();
@@ -197,51 +197,51 @@ async function runAutoBackup(manual) {
       await writable.close();
 
       await autoBackupCleanup(handle, s.autoBackupKeepDays);
-      where = handle.name || '自定义目录';
+      where = handle.name || i18n('settings.autoBackupCustom');
     } else {
-      if (!IS_EXT || !chrome.downloads) throw new Error('当前环境不支持写入下载目录');
+      if (!IS_EXT || !chrome.downloads) throw new Error(i18n('settings.noDownloads'));
       await autoBackupDownloadFile(text, name);
       await autoBackupCleanupDownloads(s.autoBackupKeepDays);
-      where = '下载目录/qihang-backup';
+      where = i18n('settings.whereDefault');
     }
   } catch (err) {
     autoBackupRunning = false;
-    const msg = err && err.message ? err.message : '备份失败';
+    const msg = err && err.message ? err.message : i18n('settings.autoBackupFailShort');
     syncAutoBackupUI(msg);
-    if (manual) toast('备份失败：' + msg);
+    if (manual) toast(i18n('settings.autoBackupFail', { msg }));
     return false;
   }
 
   autoBackupRunning = false;
   s.autoBackupLastRun = autoBackupDateKey(now);
   save();
-  syncAutoBackupUI('已备份到' + where + '（' + name + '）');
-  if (manual) toast('备份完成：' + name);
+  syncAutoBackupUI(i18n('settings.autoBackupDone', { path: where + ' · ' + name }));
+  if (manual) toast(i18n('settings.backupDoneManual', { name }));
   return true;
 }
 
 /* ---------------- 选择 / 授权目录 ---------------- */
 async function autoBackupPickDir() {
   if (!window.showDirectoryPicker) {
-    toast('当前浏览器不支持选择备份目录');
+    toast(i18n('settings.noPicker'));
     return false;
   }
   try {
     const handle = await window.showDirectoryPicker({ mode: 'readwrite', id: 'qihang-backup' });
     const perm = await handle.requestPermission({ mode: 'readwrite' });
     if (perm !== 'granted') {
-      toast('未获得目录写入权限');
+      toast(i18n('settings.pickDirFail'));
       return false;
     }
     await autoBackupSaveHandle(handle);
     state.settings.autoBackupMode = 'custom';
-    state.settings.autoBackupDirName = handle.name || '自定义目录';
+    state.settings.autoBackupDirName = handle.name || i18n('settings.autoBackupCustom');
     save();
     syncAutoBackupUI();
-    toast('备份目录已设置为 ' + (handle.name || '自定义目录'));
+    toast(i18n('settings.dirSet', { name: state.settings.autoBackupDirName }));
     return true;
   } catch (err) {
-    if (err && err.name !== 'AbortError') toast('选择目录失败');
+    if (err && err.name !== 'AbortError') toast(i18n('settings.pickDirErr'));
     return false;
   }
 }
@@ -267,8 +267,8 @@ function syncAutoBackupUI(message) {
   const dirLabel = $('autoBackupDirLabel');
   if (dirLabel) {
     dirLabel.textContent = isCustom
-      ? '自定义目录：' + (s.autoBackupDirName || '未选择（点「自定义目录」选择）')
-      : '默认位置：浏览器下载目录 → qihang-backup 文件夹';
+      ? i18n('settings.dirCustom', { name: s.autoBackupDirName || i18n('settings.dirNone') })
+      : i18n('settings.autoBackupDirDefault');
   }
 
   const openBtn = $('autoBackupOpenDir');
@@ -285,8 +285,8 @@ function syncAutoBackupUI(message) {
     status.textContent = message
       ? message
       : s.autoBackupLastRun
-        ? '上次备份：' + s.autoBackupLastRun
-        : '尚未执行';
+        ? i18n('settings.lastBackup', { time: s.autoBackupLastRun })
+        : i18n('settings.autoBackupStatusInit');
   }
 }
 
@@ -297,14 +297,15 @@ function bindAutoBackupEvents() {
 
   modeChips.innerHTML = '';
   [
-    { key: 'default', label: '默认路径' },
-    { key: 'custom', label: '自定义目录' }
+    { key: 'default', label: 'settings.autoBackupDefault' },
+    { key: 'custom', label: 'settings.autoBackupCustom' }
   ].forEach((opt) => {
     const btn = document.createElement('button');
     btn.className = 'chip';
     btn.type = 'button';
     btn.dataset.mode = opt.key;
-    btn.textContent = opt.label;
+    btn.dataset.i18n = opt.label;
+    btn.textContent = i18n(opt.label);
     btn.addEventListener('click', async () => {
       if (opt.key === 'custom') {
         await autoBackupPickDir();

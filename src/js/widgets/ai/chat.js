@@ -5,6 +5,11 @@
 
 let aiBusy = false;
 
+/* 会话标题是否仍是「新对话」的默认值（任意语言） */
+function aiIsDefaultTitle(title) {
+  return !title || i18nAll('ai.newChatTitle').indexOf(title) >= 0;
+}
+
 /* ---------------- 弹窗外壳 ---------------- */
 function ensureAiShell() {
   if ($('aiMask')) return;
@@ -18,31 +23,31 @@ function ensureAiShell() {
     '<div class="ai-shell" id="aiShell">' +
       '<aside class="ai-side">' +
         '<div class="ai-side-head">' +
-          '<button class="ai-new" id="aiNewChat" type="button">' + ICONS.plus + '<span>新建对话</span></button>' +
+          '<button class="ai-new" id="aiNewChat" type="button">' + ICONS.plus + '<span data-i18n="ai.newChat">新建对话</span></button>' +
         '</div>' +
         '<div class="ai-conv-list" id="aiConvList"></div>' +
-        '<div class="ai-side-foot">启航 AI</div>' +
+        '<div class="ai-side-foot" data-i18n="ai.brand">启航 AI</div>' +
       '</aside>' +
 
       '<section class="ai-main">' +
         '<header class="ai-topbar">' +
-          '<div class="ai-title" id="aiTitle">新对话</div>' +
+          '<div class="ai-title" id="aiTitle">' + esc(i18n('ai.newChatTitle')) + '</div>' +
           '<div class="ai-top-actions">' +
-            '<button class="ai-icon-btn" id="aiOpenSettings" type="button" title="设置">' + ICONS.gear + '</button>' +
-            '<button class="ai-icon-btn" id="aiCloseChat" type="button" title="关闭">' +
+            '<button class="ai-icon-btn" id="aiOpenSettings" type="button" data-i18n-title="ai.settings" title="设置">' + ICONS.gear + '</button>' +
+            '<button class="ai-icon-btn" id="aiCloseChat" type="button" data-i18n-title="common.close" title="关闭">' +
               '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>' +
             '</button>' +
           '</div>' +
         '</header>' +
         '<div class="ai-messages" id="aiMessages"></div>' +
         '<div class="ai-composer">' +
-          '<textarea id="aiInput" rows="1" placeholder="给 AI 发送消息，Enter 发送 / Shift + Enter 换行"></textarea>' +
+          '<textarea id="aiInput" rows="1" data-i18n-ph="ai.placeholder" placeholder="给 AI 发送消息，Enter 发送 / Shift + Enter 换行"></textarea>' +
           '<div class="ai-toolbar">' +
-            '<select class="ai-model-select" id="aiModelSelect" title="选择模型"></select>' +
-            '<button class="ai-toggle" id="aiWebToggle" type="button">联网</button>' +
-            '<button class="ai-toggle" id="aiThinkToggle" type="button">深度思考</button>' +
+            '<select class="ai-model-select" id="aiModelSelect" data-i18n-title="ai.pickModel" title="选择模型"></select>' +
+            '<button class="ai-toggle" id="aiWebToggle" type="button" data-i18n="ai.web">联网</button>' +
+            '<button class="ai-toggle" id="aiThinkToggle" type="button" data-i18n="ai.think">深度思考</button>' +
             '<span class="ai-spacer"></span>' +
-            '<button class="ai-send" id="aiSend" type="button">发送</button>' +
+            '<button class="ai-send" id="aiSend" type="button" data-i18n="ai.send">发送</button>' +
           '</div>' +
         '</div>' +
       '</section>' +
@@ -50,12 +55,12 @@ function ensureAiShell() {
       '<section class="ai-settings" id="aiSettings">' +
         '<aside class="ai-set-side">' +
           '<div class="ai-set-head">' +
-            '<button class="ai-back" id="aiCloseSettings" type="button">' + ICONS.logout + '<span>返回对话</span></button>' +
+            '<button class="ai-back" id="aiCloseSettings" type="button">' + ICONS.logout + '<span data-i18n="ai.backToChat">返回对话</span></button>' +
           '</div>' +
           '<nav class="ai-set-nav" id="aiSetNav">' +
-            '<button type="button" data-tab="models" class="active">模型设置</button>' +
-            '<button type="button" data-tab="prompts">提示词</button>' +
-            '<button type="button" data-tab="general">通用</button>' +
+            '<button type="button" data-tab="models" data-i18n="ai.tabModels" class="active">模型设置</button>' +
+            '<button type="button" data-tab="prompts" data-i18n="ai.tabPrompts">提示词</button>' +
+            '<button type="button" data-tab="general" data-i18n="ai.tabGeneral">通用</button>' +
           '</nav>' +
         '</aside>' +
         '<div class="ai-set-body" id="aiSetBody"></div>' +
@@ -63,6 +68,7 @@ function ensureAiShell() {
     '</div>';
 
   document.body.appendChild(mask);
+  applyI18n(mask);
   bindAiShellEvents();
 }
 
@@ -85,7 +91,7 @@ function aiRenderAll() {
   aiRenderToolbar();
   const conv = aiActiveConv();
   const title = $('aiTitle');
-  if (title) title.textContent = conv ? conv.title || '新对话' : '新对话';
+  if (title) title.textContent = conv && conv.title ? conv.title : i18n('ai.newChatTitle');
 }
 
 function aiRenderConvList() {
@@ -94,7 +100,7 @@ function aiRenderConvList() {
   box.innerHTML = '';
 
   if (!aiData.conversations.length) {
-    box.innerHTML = '<p class="ai-conv-empty">还没有对话记录</p>';
+    box.innerHTML = '<p class="ai-conv-empty">' + esc(i18n('ai.noConv')) + '</p>';
     return;
   }
 
@@ -105,16 +111,16 @@ function aiRenderConvList() {
 
     const title = document.createElement('span');
     title.className = 'ai-conv-title';
-    title.textContent = conv.title || '新对话';
+    title.textContent = conv.title || i18n('ai.newChatTitle');
 
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'ai-conv-del';
-    del.title = '删除对话';
+    del.title = i18n('ai.deleteConv');
     del.innerHTML = ICONS.trash;
     del.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (!window.confirm('删除这条对话记录？')) return;
+      if (!window.confirm(i18n('ai.deleteConvConfirm'))) return;
       aiDeleteConversation(conv.id);
       aiEnsureConversation();
       aiRenderAll();
@@ -139,8 +145,8 @@ function aiRenderMessages() {
   if (!conv || !conv.messages.length) {
     box.innerHTML =
       '<div class="ai-empty">' +
-        '<p class="ai-empty-title">开始一段新对话</p>' +
-        '<p class="ai-empty-sub">在设置里配置模型与接口地址后即可使用；支持多会话、提示词与联网开关。</p>' +
+        '<p class="ai-empty-title">' + esc(i18n('ai.empty')) + '</p>' +
+        '<p class="ai-empty-sub">' + esc(i18n('ai.emptySub')) + '</p>' +
       '</div>';
     return;
   }
@@ -217,12 +223,12 @@ async function aiSendMessage() {
   const model = aiActiveModel();
   if (!conv) return;
   if (!model) {
-    toast('请先在设置中添加一个模型');
+    toast(i18n('ai.needModel'));
     return;
   }
 
   conv.messages.push({ role: 'user', content: text, at: Date.now() });
-  if (!conv.title || conv.title === '新对话') conv.title = text.slice(0, 20);
+  if (aiIsDefaultTitle(conv.title)) conv.title = text.slice(0, 20);
   conv.updatedAt = Date.now();
   conv.modelId = model.id;
 
@@ -247,7 +253,9 @@ async function aiSendMessage() {
   } catch (err) {
     conv.messages.push({
       role: 'assistant',
-      content: '请求失败：' + (err && err.message ? err.message : '未知错误'),
+      content: i18n('ai.requestFailed', {
+        msg: err && err.message ? err.message : i18n('common.unknownError')
+      }),
       at: Date.now()
     });
   } finally {

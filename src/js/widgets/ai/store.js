@@ -58,7 +58,7 @@ function normalizeAiData(raw) {
     .filter((p) => p && p.content)
     .map((p) => ({
       id: p.id || uid('p'),
-      title: String(p.title || '未命名提示词').slice(0, 30),
+      title: String(p.title || i18n('ai.untitledPrompt')).slice(0, 30),
       content: String(p.content)
     }));
 
@@ -66,7 +66,7 @@ function normalizeAiData(raw) {
     .filter((c) => c && Array.isArray(c.messages))
     .map((c) => ({
       id: c.id || uid('c'),
-      title: String(c.title || '新对话').slice(0, 40),
+      title: String(c.title || i18n('ai.newChatTitle')).slice(0, 40),
       modelId: c.modelId || '',
       updatedAt: Number(c.updatedAt) || Date.now(),
       messages: c.messages
@@ -134,7 +134,7 @@ function aiNewConversation() {
   const model = aiActiveModel();
   const conv = {
     id: uid('c'),
-    title: '新对话',
+    title: i18n('ai.newChatTitle'),
     modelId: model ? model.id : '',
     updatedAt: Date.now(),
     messages: []

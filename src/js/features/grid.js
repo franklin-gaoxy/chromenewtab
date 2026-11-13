@@ -312,7 +312,7 @@ function createTile(item, groupId, searching, index) {
 
   const more = document.createElement('button');
   more.className = 'tile-more';
-  more.title = '更多操作';
+  more.title = i18n('common.more');
   more.innerHTML = ICONS.more;
 
   tile.append(iconBox, name, more);
@@ -336,7 +336,7 @@ function createAddTile() {
   tile.className = 'tile add';
   tile.innerHTML =
     '<div class="tile-icon">' + ICONS.plus + '</div>' +
-    '<div class="tile-name">添加网站</div>';
+    '<div class="tile-name">' + esc(i18n('grid.addSite')) + '</div>';
   tile.addEventListener('click', () => openLinkModal({ groupId: currentGroup().id }));
   return tile;
 }
@@ -401,7 +401,7 @@ function renderDots(pages) {
   for (let i = 0; i < pages; i += 1) {
     const dot = document.createElement('button');
     dot.className = 'dot' + (i === ui.page ? ' active' : '');
-    dot.title = '第 ' + (i + 1) + ' 页';
+    dot.title = i18n('grid.page', { n: i + 1 });
     dot.addEventListener('click', () => {
       ui.page = i;
       renderGrid();
@@ -418,8 +418,8 @@ function renderHint(count, searching) {
   }
   hint.hidden = false;
   hint.textContent = count
-    ? '找到 ' + count + ' 个站点，按回车用搜索引擎搜索「' + ui.query + '」'
-    : '没有匹配的站点，按回车搜索「' + ui.query + '」';
+    ? i18n('search.hintFound', { n: count, q: ui.query })
+    : i18n('search.hintNone', { q: ui.query });
 }
 
 function renderAll() {

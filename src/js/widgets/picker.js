@@ -3,6 +3,19 @@
  * 列表内容完全由 WidgetRegistry 提供，新增组件无需改这里。
  * ============================================================ */
 
+/* 组件名称 / 说明优先取文案字典（widget.<type> / widget.<type>Desc），缺失时用组件自带的 */
+function widgetName(def) {
+  if (!def) return '';
+  const key = 'widget.' + def.type;
+  return i18nHas(key) ? i18n(key) : def.name || def.type;
+}
+
+function widgetDesc(def) {
+  if (!def) return '';
+  const key = 'widget.' + def.type + 'Desc';
+  return i18nHas(key) ? i18n(key) : def.desc || '';
+}
+
 function addWidget(type) {
   const def = WidgetRegistry.get(type);
   const g = currentGroup();
@@ -12,14 +25,14 @@ function addWidget(type) {
     id: uid('i'),
     kind: 'widget',
     widget: def.type,
-    title: def.name,
+    title: widgetName(def),
     config: {}
   });
 
   save();
   ui.page = Math.max(0, Math.floor((g.items.length - 1) / perPage()));
   renderAll();
-  toast('已添加「' + def.name + '」');
+  toast(i18n('common.added', { name: widgetName(def) }));
 }
 
 function ensureWidgetPicker() {
@@ -32,17 +45,18 @@ function ensureWidgetPicker() {
   mask.innerHTML =
     '<div class="modal widget-picker" role="dialog" aria-modal="true" aria-labelledby="widgetPickerTitle">' +
       '<header class="modal-head">' +
-        '<h2 id="widgetPickerTitle">添加组件</h2>' +
-        '<button class="icon-btn" type="button" data-close="widgetMask" title="关闭">' +
+        '<h2 id="widgetPickerTitle" data-i18n="widget.pickTitle">添加组件</h2>' +
+        '<button class="icon-btn" type="button" data-close="widgetMask" data-i18n-title="common.close" title="关闭">' +
           '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>' +
         '</button>' +
       '</header>' +
       '<div class="modal-body">' +
-        '<p class="picker-tip">组件会插入当前分组，可拖动排序，右键可重命名或删除。</p>' +
+        '<p class="picker-tip" data-i18n="widget.pickerTip">组件会插入当前分组，可拖动排序，右键可重命名或删除。</p>' +
         '<div class="widget-choices" id="widgetChoices"></div>' +
       '</div>' +
     '</div>';
   document.body.appendChild(mask);
+  applyI18n(mask);
 
   const closeBtn = mask.querySelector('[data-close]');
   if (closeBtn) closeBtn.addEventListener('click', () => closeModal('widgetMask'));
@@ -58,7 +72,7 @@ function renderWidgetChoices() {
 
   const defs = WidgetRegistry.all();
   if (!defs.length) {
-    box.innerHTML = '<p class="picker-empty">还没有可用的组件</p>';
+    box.innerHTML = '<p class="picker-empty">' + esc(i18n('widget.none')) + '</p>';
     return;
   }
 
@@ -72,10 +86,12 @@ function renderWidgetChoices() {
     btn.innerHTML =
       '<span class="widget-choice-icon">' + (def.icon || ICONS.widget) + '</span>' +
       '<span class="widget-choice-text">' +
-        '<span class="widget-choice-name">' + esc(def.name) + '</span>' +
-        '<span class="widget-choice-desc">' + esc(def.desc || '') + '</span>' +
+        '<span class="widget-choice-name">' + esc(widgetName(def)) + '</span>' +
+        '<span class="widget-choice-desc">' + esc(widgetDesc(def)) + '</span>' +
       '</span>' +
-      '<span class="widget-choice-span">' + (span > 1 ? '占 ' + span + ' 格' : '占 1 格') + '</span>';
+      '<span class="widget-choice-span">' +
+        esc(span > 1 ? i18n('widget.spanN', { n: span }) : i18n('widget.span1')) +
+      '</span>';
 
     btn.addEventListener('click', () => {
       addWidget(def.type);
@@ -97,7 +113,7 @@ function openWidgetMenu(event, groupId, item) {
 
   if (def && typeof def.open === 'function') {
     items.push({
-      label: '打开',
+      label: i18n('menu.open'),
       icon: ICONS.open,
       run: () => def.open(widgetContext(item, groupId))
     });
@@ -105,10 +121,10 @@ function openWidgetMenu(event, groupId, item) {
   }
 
   items.push({
-    label: '重命名',
+    label: i18n('common.rename'),
     icon: ICONS.edit,
     run: () => {
-      const name = window.prompt('组件名称', item.title || (def && def.name) || '');
+      const name = window.prompt(i18n('widget.renamePrompt'), item.title || widgetName(def));
       if (name === null) return;
       const trimmed = name.trim().slice(0, 20);
       if (!trimmed) return;
@@ -119,7 +135,7 @@ function openWidgetMenu(event, groupId, item) {
   });
 
   items.push({
-    label: '删除组件',
+    label: i18n('widget.remove'),
     icon: ICONS.trash,
     danger: true,
     run: () => removeItem(groupId, item.id)

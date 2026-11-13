@@ -46,48 +46,48 @@ function findItem(groupId, itemId) {
 /* 空白处右键：全局操作入口 */
 function openCanvasMenu(event) {
   showMenu(event, [
-    { label: '添加网站', icon: ICONS.plus, run: () => openLinkModal({}) },
-    { label: '添加组件', icon: ICONS.widget, run: () => openWidgetPicker() },
-    { label: '新建分组', icon: ICONS.rename, run: createGroup },
+    { label: i18n('menu.addSite'), icon: ICONS.plus, run: () => openLinkModal({}) },
+    { label: i18n('menu.addWidget'), icon: ICONS.widget, run: () => openWidgetPicker() },
+    { label: i18n('rail.newGroup'), icon: ICONS.rename, run: createGroup },
     { sep: true },
-    { label: '同步书签', icon: ICONS.bookmark, run: () => openBookmarkSync() },
-    { label: '更换背景', icon: ICONS.image, run: () => openSettingsPanel('bg') },
-    { label: '远程同步', icon: ICONS.cloud, run: () => openSettingsPanel('sync') },
+    { label: i18n('menu.syncBookmarks'), icon: ICONS.bookmark, run: () => openBookmarkSync() },
+    { label: i18n('menu.changeBg'), icon: ICONS.image, run: () => openSettingsPanel('bg') },
+    { label: i18n('menu.remoteSync'), icon: ICONS.cloud, run: () => openSettingsPanel('sync') },
     { sep: true },
-    { label: '设置', icon: ICONS.gear, run: () => openSettingsPanel('engine') },
-    { label: '刷新页面', icon: ICONS.refresh, run: () => window.location.reload() }
+    { label: i18n('menu.settings'), icon: ICONS.gear, run: () => openSettingsPanel('lang') },
+    { label: i18n('menu.refresh'), icon: ICONS.refresh, run: () => window.location.reload() }
   ]);
 }
 
 function openItemMenu(event, groupId, item) {
   showMenu(event, [
-    { label: '打开', icon: ICONS.open, run: () => openUrl(item.url) },
-    { label: '复制链接', icon: ICONS.copy, run: () => copyText(item.url) },
+    { label: i18n('menu.open'), icon: ICONS.open, run: () => openUrl(item.url) },
+    { label: i18n('menu.copyUrl'), icon: ICONS.copy, run: () => copyText(item.url) },
     { sep: true },
-    { label: '编辑', icon: ICONS.edit, run: () => openLinkModal({ groupId, item }) },
-    { label: '删除', icon: ICONS.trash, danger: true, run: () => removeItem(groupId, item.id) }
+    { label: i18n('menu.edit'), icon: ICONS.edit, run: () => openLinkModal({ groupId, item }) },
+    { label: i18n('menu.delete'), icon: ICONS.trash, danger: true, run: () => removeItem(groupId, item.id) }
   ]);
 }
 
 function openGroupMenu(event, g) {
   const node = event.target.closest('.rail-item');
   showMenu(event, [
-    { label: '重命名', icon: ICONS.rename, run: () => startRename(g, node) },
-    { label: '清空分组', icon: ICONS.broom, run: () => {
-      if (!g.items.length) return toast('分组已经是空的');
+    { label: i18n('menu.renameGroup'), icon: ICONS.rename, run: () => startRename(g, node) },
+    { label: i18n('menu.clearGroup'), icon: ICONS.broom, run: () => {
+      if (!g.items.length) return toast(i18n('menu.clearGroupEmpty'));
       g.items = [];
       save();
       renderAll();
-      toast('已清空「' + g.name + '」');
+      toast(i18n('menu.cleared', { name: g.name }));
     } },
     { sep: true },
-    { label: '删除分组', icon: ICONS.trash, danger: true, run: () => removeGroup(g.id) }
+    { label: i18n('menu.deleteGroup'), icon: ICONS.trash, danger: true, run: () => removeGroup(g.id) }
   ]);
 }
 
 function removeGroup(id) {
   if (state.groups.length <= 1) {
-    toast('至少保留一个分组');
+    toast(i18n('menu.keepOneGroup'));
     return;
   }
   const g = groupById(id);
@@ -97,7 +97,7 @@ function removeGroup(id) {
   ui.page = 0;
   save();
   renderAll();
-  toast('已删除「' + g.name + '」');
+  toast(i18n('menu.groupDeleted', { name: g.name }));
 }
 
 function removeItem(groupId, itemId) {
@@ -106,7 +106,7 @@ function removeItem(groupId, itemId) {
   entry.list.splice(entry.index, 1);
   save();
   renderAll();
-  toast('已删除');
+  toast(i18n('menu.deleted'));
 }
 
 /* ---------------- 事件绑定 ---------------- */

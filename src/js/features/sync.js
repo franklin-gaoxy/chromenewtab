@@ -18,7 +18,7 @@ async function ensureServerPermission(server) {
   try {
     origin = new URL(server).origin + '/*';
   } catch (e) {
-    throw new Error('服务器地址格式不正确');
+    throw new Error(i18n('sync.badServer'));
   }
   try {
     return await chrome.permissions.request({ origins: [origin] });
@@ -30,7 +30,7 @@ async function ensureServerPermission(server) {
 async function qspRequest(pathname, options) {
   const opts = options || {};
   const base = normalizeServer(syncState.server);
-  if (!base) throw new Error('请先填写服务器地址');
+  if (!base) throw new Error(i18n('sync.noServer'));
 
   const headers = {
     'Content-Type': 'application/json',
@@ -51,7 +51,9 @@ async function qspRequest(pathname, options) {
       cache: 'no-store'
     });
   } catch (e) {
-    throw new Error(e.name === 'AbortError' ? '请求超时，请检查服务器地址' : '无法连接服务器，请检查地址与网络');
+    throw new Error(
+      e.name === 'AbortError' ? i18n('sync.timeout') : i18n('sync.network')
+    );
   } finally {
     clearTimeout(timer);
   }
@@ -60,12 +62,12 @@ async function qspRequest(pathname, options) {
   try {
     json = await res.json();
   } catch (e) {
-    throw new Error('服务器返回的内容不是合法 JSON（HTTP ' + res.status + '）');
+    throw new Error(i18n('sync.badJson', { status: res.status }));
   }
 
   if (!json || json.ok !== true) {
     const info = (json && json.error) || {};
-    const err = new Error(info.message || '请求失败（HTTP ' + res.status + '）');
+    const err = new Error(info.message || i18n('sync.httpFail', { status: res.status }));
     err.code = info.code || 'SERVER_ERROR';
     err.status = res.status;
     throw err;
@@ -117,7 +119,7 @@ function buildSyncPayload() {
 function applySyncPayload(payload) {
   const groups = payload && Array.isArray(payload.groups) ? payload.groups : [];
   if (!groups.length) {
-    toast('服务器上没有可用的分组数据');
+    toast(i18n('sync.noRemoteData'));
     return false;
   }
   const normalized = normalizeData({
@@ -140,7 +142,7 @@ function mergeGroups(localGroups, remoteGroups) {
 
   const push = (g) => {
     if (!g || !g.id || index.has(g.id)) return index.get(g.id);
-    const copy = { id: g.id, name: String(g.name || '未命名').slice(0, 20), items: [] };
+    const copy = { id: g.id, name: String(g.name || i18n('common.unnamed')).slice(0, 20), items: [] };
     index.set(g.id, copy);
     result.push(copy);
     return copy;
@@ -182,7 +184,7 @@ function mergeGroups(localGroups, remoteGroups) {
           target.items.push({
             id: it.id || uid('f'),
             kind: 'folder',
-            title: String(it.title || '文件夹').slice(0, 20),
+            title: String(it.title || i18n('folder.newName')).slice(0, 20),
             items: inner
           });
           return;
@@ -222,19 +224,20 @@ async function doAuth(register) {
   const username = $('syncUserInput').value.trim();
   const password = $('syncPassInput').value;
 
-  if (!server) return toast('请填写服务器地址');
-  if (!username || !password) return toast('请填写用户名和密码');
+  if (!server) return toast(i18n('sync.noServer'));
+  if (!username || !password) return toast(i18n('sync.needCredentials'));
 
   try {
     const granted = await ensureServerPermission(server);
-    if (!granted) return toast('未授权访问该服务器地址');
+    if (!granted) return toast(i18n('sync.noPermission'));
   } catch (e) {
     return toast(e.message);
   }
 
   syncState.server = server;
   setSyncBusy(true);
-  $('syncStatus') && ($('syncStatus').textContent = register ? '正在注册…' : '正在登录…');
+  $('syncStatus') &&
+    ($('syncStatus').textContent = register ? i18n('sync.registering') : i18n('sync.loggingIn'));
 
   try {
     const data = await qspRequest(
@@ -248,9 +251,9 @@ async function doAuth(register) {
     $('syncPassInput').value = '';
     await persistSync();
     updateSyncUI();
-    toast(register ? '注册成功，已登录' : '登录成功');
+    toast(register ? i18n('settings.syncRegisterDone') : i18n('settings.syncLoginDone'));
   } catch (err) {
-    toast(err.message || '登录失败');
+    toast(err.message || i18n('sync.loginFailed'));
     updateSyncUI();
   } finally {
     setSyncBusy(false);
@@ -272,14 +275,14 @@ async function doLogout() {
   syncState.lastSyncAt = 0;
   await persistSync();
   updateSyncUI();
-  toast('已退出登录');
+  toast(i18n('settings.syncLogoutDone'));
 }
 
 async function syncUpload() {
   const payload = buildSyncPayload();
   const size = new Blob([JSON.stringify(payload)]).size;
   if (size > 2 * 1024 * 1024) {
-    throw new Error('数据超过 2MB，请先精简自定义图标后再上传');
+    throw new Error(i18n('sync.tooLarge'));
   }
   const data = await qspRequest('/api/v1/sync', {
     method: 'PUT',
@@ -289,19 +292,19 @@ async function syncUpload() {
   syncState.lastSyncAt = Date.now();
   await persistSync();
   updateSyncUI();
-  toast('已上传 ' + payload.groups.length + ' 个分组');
+  toast(i18n('sync.uploaded', { n: payload.groups.length }));
 }
 
 async function syncDownload() {
-  if (!window.confirm('将用服务器上的数据覆盖本机分组，确定继续？')) return;
+  if (!window.confirm(i18n('sync.downloadConfirm'))) return;
   const remote = await qspRequest('/api/v1/sync');
-  if (!remote.payload) throw new Error('服务器上还没有备份数据');
+  if (!remote.payload) throw new Error(i18n('sync.emptyRemote'));
   if (applySyncPayload(remote.payload)) {
     syncState.rev = remote.rev;
     syncState.lastSyncAt = Date.now();
     await persistSync();
     updateSyncUI();
-    toast('已从服务器恢复');
+    toast(i18n('settings.syncDownloadDone'));
   }
 }
 
@@ -321,7 +324,7 @@ async function syncMerge() {
   syncState.lastSyncAt = Date.now();
   await persistSync();
   updateSyncUI();
-  toast('已合并上传，共 ' + totalItems() + ' 个站点');
+  toast(i18n('sync.merged', { n: totalItems() }));
 }
 
 function setSyncBusy(busy) {
@@ -342,9 +345,9 @@ async function runSync(label, task) {
     await task();
   } catch (err) {
     if (err.code === 'CONFLICT') {
-      toast('服务器数据已被其他设备更新，请先「从服务器恢复」或「智能合并」');
+      toast(i18n('sync.conflict'));
     } else {
-      toast(err.message || '同步失败');
+      toast(err.message || i18n('sync.failed'));
     }
     if (status) status.textContent = previous;
   } finally {
@@ -367,12 +370,12 @@ function updateSyncUI() {
   }
   if (!logged) return;
 
-  $('syncAccount').textContent = syncState.username || '未知用户';
+  $('syncAccount').textContent = syncState.username || i18n('sync.unknownUser');
   $('syncServerLabel').textContent =
     (syncState.server || '') + (syncState.rev ? ' · rev ' + syncState.rev : '');
   $('syncStatus').textContent = syncState.lastSyncAt
-    ? '上次同步：' + new Date(syncState.lastSyncAt).toLocaleString()
-    : '尚未同步';
+    ? i18n('sync.lastSyncAt', { time: new Date(syncState.lastSyncAt).toLocaleString() })
+    : i18n('settings.syncStatusInit');
 }
 
 /* 打开 QSP 协议文档（扩展内以纯文本形式展示，避免 .md 被直接下载） */
@@ -394,16 +397,19 @@ async function openProtocolDoc() {
 }
 
 function bindSyncEvents() {
-  $('protocolDocLink').addEventListener('click', (e) => {
+  // 协议文档链接由 data-i18n-html 渲染，语言切换会重建节点，因此用事件委托
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest && e.target.closest('#protocolDocLink');
+    if (!link) return;
     e.preventDefault();
     openProtocolDoc();
   });
   $('syncLogin').addEventListener('click', () => doAuth(false));
   $('syncRegister').addEventListener('click', () => doAuth(true));
   $('syncLogout').addEventListener('click', doLogout);
-  $('syncUpload').addEventListener('click', () => runSync('正在上传…', syncUpload));
-  $('syncDownload').addEventListener('click', () => runSync('正在恢复…', syncDownload));
-  $('syncMerge').addEventListener('click', () => runSync('正在合并…', syncMerge));
+  $('syncUpload').addEventListener('click', () => runSync(i18n('sync.busyUpload'), syncUpload));
+  $('syncDownload').addEventListener('click', () => runSync(i18n('sync.busyDownload'), syncDownload));
+  $('syncMerge').addEventListener('click', () => runSync(i18n('sync.busyMerge'), syncMerge));
   $('syncPassInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') doAuth(false);
   });

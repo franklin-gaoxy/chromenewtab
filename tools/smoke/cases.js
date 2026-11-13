@@ -332,7 +332,7 @@ function runSmokeTests() {
 
         /* ---------------- 设置区块折叠（默认折叠） ---------------- */
         const autoHeads = document.querySelectorAll('.drawer-body h3.collapse-head');
-        ok('settings-collapse-auto', autoHeads.length === 6, 'n=' + autoHeads.length);
+        ok('settings-collapse-auto', autoHeads.length === 7, 'n=' + autoHeads.length);
 
         initCollapsibleSections();
         const dataSection = document.querySelector('.setting-block[data-section="data"]');
@@ -351,6 +351,31 @@ function runSmokeTests() {
           'settings-collapse',
           dataSection.classList.contains('collapsed') &&
             state.settings.expandedSections.indexOf('data') < 0
+        );
+
+        /* ---------------- 界面语言（i18n） ---------------- */
+        const zhDeleted = i18n('menu.deleted');
+        applyLanguage('en');
+        ok(
+          'i18n-en',
+          i18n('menu.deleted') === 'Deleted' && document.documentElement.lang === 'en',
+          i18n('menu.deleted')
+        );
+        ok(
+          'i18n-dom',
+          document.getElementById('settingsTitle').textContent === 'Settings',
+          document.getElementById('settingsTitle').textContent
+        );
+        ok(
+          'i18n-fallback',
+          i18n('__missing_key__') === '__missing_key__',
+          i18n('__missing_key__')
+        );
+        applyLanguage('zh');
+        ok(
+          'i18n-back',
+          i18n('menu.deleted') === zhDeleted && document.documentElement.lang === 'zh-CN',
+          i18n('menu.deleted')
         );
 
         /* ---------------- 定时备份：到期判断 ---------------- */
@@ -378,6 +403,30 @@ function runSmokeTests() {
         state.settings.autoBackupEnabled = keepEnabled;
         state.settings.autoBackupTime = keepTime;
         state.settings.autoBackupLastRun = keepLastRun;
+
+        /* ---------------- 分组拖拽排序 ---------------- */
+        const railBaseOrder = state.groups.map((g) => g.id).join(',');
+        state.groups.push({ id: 'g_smoke', name: '冒烟分组', items: [] });
+        moveGroup('g_smoke', state.groups[0].id, false);
+        ok(
+          'rail-reorder-first',
+          state.groups[0].id === 'g_smoke',
+          state.groups.map((g) => g.id).join(',')
+        );
+        moveGroup('g_smoke', state.groups[state.groups.length - 1].id, true);
+        ok(
+          'rail-reorder-last',
+          state.groups[state.groups.length - 1].id === 'g_smoke',
+          state.groups.map((g) => g.id).join(',')
+        );
+        state.groups = state.groups.filter((g) => g.id !== 'g_smoke');
+        save();
+        renderAll();
+        ok(
+          'rail-reorder-restore',
+          state.groups.map((g) => g.id).join(',') === railBaseOrder,
+          state.groups.map((g) => g.id).join(',')
+        );
 
         done();
       })
