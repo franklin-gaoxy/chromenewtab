@@ -18,23 +18,30 @@ function updateIconPreview() {
 
   if (!abs && !custom) return;
 
-  // 与磁贴走同一套解析逻辑，预览里不会出现第三方源的「灰底字母」占位图
+  // 预览只展示「将要保存的固定地址」，不做后台探测
+  const src = custom || (abs ? faviconUrl(abs, 128) : '');
+  if (!src) return;
+
   const token = ++iconPreviewToken;
-  resolveIcon({ url: abs, icon: custom }).then((src) => {
-    if (!src || token !== iconPreviewToken) return;
-    const fail = () => {
-      img.hidden = true;
-      txt.hidden = false;
-      txt.textContent = firstChar(title || hostOf(abs) || '?');
-    };
-    img.onload = () => {
-      if (token !== iconPreviewToken) return;
-      img.hidden = false;
-      txt.hidden = true;
-    };
-    img.onerror = fail;
-    img.src = src;
-  });
+  const done = () => {
+    if (token !== iconPreviewToken) return;
+    img.hidden = false;
+    txt.hidden = true;
+  };
+  const fail = () => {
+    if (token !== iconPreviewToken) return;
+    img.hidden = true;
+    txt.hidden = false;
+    txt.textContent = firstChar(title || hostOf(abs) || '?');
+  };
+
+  if (img.getAttribute('src') === src && img.complete && img.naturalWidth) {
+    done();
+    return;
+  }
+  img.onload = done;
+  img.onerror = fail;
+  img.src = src;
 }
 
 /* ---------------- 纯色文字图标 ---------------- */
@@ -116,11 +123,10 @@ let iconCandUrl = '';
 function syncCandidateActive() {
   const box = $('iconCandidates');
   if (!box) return;
-  const abs = normalizeUrl($('fUrl').value);
-  const auto = abs ? (iconCandidateList(abs)[0] || '') : '';
-  const current = $('fIcon').value.trim() || auto;
+  // 只用输入框里已固定的地址做高亮；留空时磁贴用的是浏览器本地图标，不对应任何候选
+  const current = $('fIcon').value.trim();
   Array.from(box.children).forEach((btn) => {
-    btn.classList.toggle('active', current === btn.dataset.src);
+    btn.classList.toggle('active', !!current && current === btn.dataset.src);
   });
 }
 
@@ -297,9 +303,24 @@ function bindLinkEvents() {
     $('letterIconColor').value = '';
     $('letterIconPanel').hidden = true;
     syncColorDots();
-    updateIconPreview();
-    syncCandidateActive();
-    toast(i18n('link.iconAutoDone'));
+
+    // 「自动获取」= 主动探测一次，把最清晰的地址固定写进输入框后保存；
+    // 磁贴渲染不再自己探测，所以图标定下来就不会变。
+    const abs = normalizeUrl($('fUrl').value);
+    if (!abs) {
+      updateIconPreview();
+      syncCandidateActive();
+      return;
+    }
+    toast(i18n('link.iconFetching'));
+    resolveIcon({ url: abs }).then((src) => {
+      if (src && !isInternalFaviconUrl(src)) {
+        $('fIcon').value = src;
+      }
+      updateIconPreview();
+      syncCandidateActive();
+      toast(i18n('link.iconAutoDone'));
+    });
   });
 
   // 文字图标底色：预设色块 + 直接填色号

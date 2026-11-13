@@ -33,66 +33,13 @@ function pageCount(len, searching) {
 /* 图标清晰度阈值：边长低于 48px 视为模糊，达到 96px 才认为足够高清 */
 const ICON_CLEAR_PX = 48;
 const ICON_HI_PX = 96;
-const ICON_CACHE_KEY = 'qihang:icon-cache';
-const ICON_CACHE_TTL = 1000 * 60 * 60 * 24 * 7; // 7 天
-const ICON_CACHE_MAX = 400;
-
-/* 解析结果按 host 落到 localStorage：刷新页面时直接命中，不再先闪字母块 */
-function loadIconCache() {
-  const map = new Map();
-  try {
-    const data = JSON.parse(localStorage.getItem(ICON_CACHE_KEY) || '{}');
-    const now = Date.now();
-    Object.keys(data).forEach((host) => {
-      const row = data[host];
-      if (!row || !row.src) return;
-      if (now - Number(row.ts || 0) > ICON_CACHE_TTL) return;
-      map.set(host, row.src);
-    });
-  } catch (e) { /* 缓存损坏就当空的 */ }
-  return map;
-}
-
-function persistIconCache(host, src) {
-  try {
-    const data = JSON.parse(localStorage.getItem(ICON_CACHE_KEY) || '{}');
-    data[host] = { src: src, ts: Date.now() };
-    const keys = Object.keys(data);
-    if (keys.length > ICON_CACHE_MAX) {
-      keys
-        .sort((a, b) => Number(data[a].ts || 0) - Number(data[b].ts || 0))
-        .slice(0, keys.length - ICON_CACHE_MAX)
-        .forEach((k) => delete data[k]);
-    }
-    localStorage.setItem(ICON_CACHE_KEY, JSON.stringify(data));
-  } catch (e) { /* 写失败不影响显示 */ }
-}
-
-function rememberIcon(host, src) {
-  if (!host || !src) return;
-  iconSrcCache.set(host, src);
-  persistIconCache(host, src);
-}
-
-function forgetIcon(host) {
-  iconSrcCache.delete(host);
-  try {
-    const data = JSON.parse(localStorage.getItem(ICON_CACHE_KEY) || '{}');
-    if (data[host]) {
-      delete data[host];
-      localStorage.setItem(ICON_CACHE_KEY, JSON.stringify(data));
-    }
-  } catch (e) { /* 忽略 */ }
-}
-
-const iconSrcCache = loadIconCache(); // host -> 最终采用的图标地址（跨会话保留）
-const iconJobs = new Map();           // host -> 正在解析的 Promise（避免同站点重复请求）
+const ICON_TIMEOUT = 5000; // 单张候选图超时（只在用户主动「自动获取」时探测）
 
 /* 加载单张图标，失败或超时返回 null */
 function loadIcon(src) {
   return new Promise((resolve) => {
     const img = new Image();
-    const timer = setTimeout(() => resolve(null), 2500);
+    const timer = setTimeout(() => resolve(null), ICON_TIMEOUT);
     img.onload = () => {
       clearTimeout(timer);
       resolve(img);
@@ -113,39 +60,76 @@ function isPlaceholderIcon(img) {
   return w === 150 && h === 150;
 }
 
-/* 按候选顺序找图：优先 96px+ 的真高清，其次 48px+，都没有才退回第一张可用的 */
+/* 只在用户点「自动获取」/ 弹窗预览候选时调用：并发探测候选源，取最清晰的一个。
+   不写缓存、不碰数据 —— 磁贴渲染永远用固定地址（item.icon 或浏览器本地 favicon）。 */
 function resolveIcon(item) {
   const custom = String(item.icon || '').trim();
   if (custom) return Promise.resolve(custom);
 
-  const host = hostOf(item.url);
-  if (!host) return Promise.resolve('');
-  if (iconSrcCache.has(host)) return Promise.resolve(iconSrcCache.get(host));
-  if (iconJobs.has(host)) return iconJobs.get(host);
-
   const candidates = iconCandidateList(item.url).slice(0, 8);
-  const job = (async () => {
-    let mid = '';
-    let any = '';
-    for (const src of candidates) {
-      const img = await loadIcon(src);
-      if (!img || isPlaceholderIcon(img)) continue;
-      const px = Math.max(img.naturalWidth, img.naturalHeight);
-      if (!any) any = src;
-      if (px >= ICON_HI_PX) {
-        rememberIcon(host, src);
-        return src;
-      }
-      if (px >= ICON_CLEAR_PX && !mid) mid = src;
-    }
-    const best = mid || any;
-    if (best) rememberIcon(host, best);
-    return best;
-  })();
+  if (!candidates.length) return Promise.resolve('');
 
-  iconJobs.set(host, job);
-  job.then(() => iconJobs.delete(host));
-  return job;
+  return Promise.all(
+    candidates.map(async (src, order) => {
+      const img = await loadIcon(src);
+      if (!img || isPlaceholderIcon(img)) return null;
+      return { src, order, px: Math.max(img.naturalWidth, img.naturalHeight) };
+    })
+  ).then((rows) => {
+    const found = rows.filter(Boolean).sort((a, b) => a.order - b.order);
+    if (!found.length) return '';
+    const hi = found.find((r) => r.px >= ICON_HI_PX);
+    const mid = found.find((r) => r.px >= ICON_CLEAR_PX);
+    return (hi || mid || found[0]).src;
+  });
+}
+
+/* 本次会话已尝试过自动补图的磁贴，避免切分组时反复探测 */
+const iconAutoTried = new Set();
+
+/* 已加载过的图标 <img> 节点池：切换分组重建磁贴时直接复用节点，
+   浏览器不会重新发请求、也不会重新解码，慢网下不会「等一会儿才出现」 */
+const iconImgPool = new Map(); // src -> HTMLImageElement[]
+const ICON_IMG_MAX = 400;
+let iconImgCount = 0;
+
+function takePooledIconImg(src) {
+  const list = iconImgPool.get(src);
+  if (!list) return null;
+  for (const el of list) {
+    if (!el.isConnected) return el;
+  }
+  return null;
+}
+
+function putIconImg(src, img) {
+  const list = iconImgPool.get(src);
+  if (list) list.push(img);
+  else iconImgPool.set(src, [img]);
+  iconImgCount += 1;
+  if (iconImgCount <= ICON_IMG_MAX) return;
+  // 超限时淘汰最早创建、且当前不在页面上的节点
+  for (const [key, arr] of iconImgPool) {
+    const idx = arr.findIndex((el) => !el.isConnected);
+    if (idx < 0) continue;
+    arr.splice(idx, 1);
+    iconImgCount -= 1;
+    if (!arr.length) iconImgPool.delete(key);
+    break;
+  }
+}
+
+/* 加载失败的节点要出池，否则下次会复用到一张死图 */
+function dropIconImg(src, img) {
+  const list = iconImgPool.get(src);
+  if (!list) return;
+  const idx = list.indexOf(img);
+  if (idx < 0) return;
+  list.splice(idx, 1);
+  iconImgCount -= 1;
+  if (!list.length) iconImgPool.delete(src);
+  img.onerror = null;
+  if (img.parentNode) img.parentNode.removeChild(img);
 }
 
 function paintIcon(container, item) {
@@ -177,18 +161,23 @@ function paintIcon(container, item) {
     container.innerHTML = '';
     container.classList.remove('cover');
     container.style.background = '';
-    const img = document.createElement('img');
-    img.alt = '';
-    img.draggable = false;
-    img.addEventListener(
-      'error',
-      () => {
-        if (mine === seq && onFail) onFail();
-      },
-      { once: true }
-    );
+
+    // 同一个图标地址复用已加载过的节点：切分组回来零请求、零解码
+    let img = takePooledIconImg(src);
+    if (!img) {
+      img = document.createElement('img');
+      img.alt = '';
+      img.draggable = false;
+      putIconImg(src, img);
+    }
+    // 用属性赋值而不是 addEventListener，复用时能覆盖上一次的回调
+    img.onerror = () => {
+      if (mine !== seq) return;
+      dropIconImg(src, img);
+      if (onFail) onFail();
+    };
     container.appendChild(img);
-    img.src = src;
+    if (img.getAttribute('src') !== src) img.src = src;
   };
 
   if (custom) {
@@ -203,35 +192,23 @@ function paintIcon(container, item) {
     return;
   }
 
-  const cached = iconSrcCache.get(host);
-  if (cached) {
-    // 命中缓存直接上屏（HTTP 缓存下几乎瞬时），不画字母块
-    showImage(cached, () => {
-      forgetIcon(host);
-      resolveIcon(item).then((src) => {
-        if (src) showImage(src, showLetter);
-        else showLetter();
-      });
-    });
-    return;
-  }
+  // 未设置图标：用浏览器本地图标（固定地址，扩展内是 _favicon?pageUrl=…&size=128）
+  const fixed = faviconUrl(item.url, 128);
+  if (fixed) showImage(fixed, showLetter);
+  else showLetter();
 
-  // 无缓存：先用浏览器本地 favicon 顶上（通常已缓存），高清源解析完成后再换
-  let resolved = false;
-  let quickFailed = false;
-  const quick = IS_EXT ? faviconUrl(item.url, 128) : '';
-  if (quick) {
-    showImage(quick, () => {
-      if (resolved) showLetter();
-      else quickFailed = true;
-    });
-  }
-
-  resolveIcon(item).then((src) => {
-    resolved = true;
-    if (src) showImage(src, showLetter);
-    else if (!quick || quickFailed) showLetter();
-  });
+  // 开关打开时才补高清图：只为「没设置过图标」的站点挑一次，结果固化进 item.icon。
+  // 固化之后即使再关掉开关，地址仍然生效，不会出现图标缺失或变化。
+  if (!state.settings.iconAutoFetch || !item.url || iconAutoTried.has(item.id)) return;
+  iconAutoTried.add(item.id);
+  resolveIcon({ url: item.url })
+    .then((src) => {
+      if (!src || isInternalFaviconUrl(src)) return;
+      item.icon = src;
+      save();
+      showImage(src, () => { /* 换图失败保持本地图标 */ });
+    })
+    .catch(() => { /* 探测失败保持本地图标 */ });
 }
 
 /* 磁贴拖拽排序 / 合并（网站磁贴、文件夹磁贴与组件磁贴共用） */

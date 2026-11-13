@@ -112,6 +112,7 @@ const THEMES = [
 
 const DEFAULT_SETTINGS = {
   lang: 'zh',         // 界面语言：zh | en（见 core/i18n.js）
+  iconAutoFetch: false, // 自动获取高清图标（默认关闭：只用固定地址）
   engine: 'bing',
   cat: 'web',
   theme: 'forest',

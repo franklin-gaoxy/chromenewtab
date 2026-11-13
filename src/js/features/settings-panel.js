@@ -98,6 +98,14 @@ function buildSettingsPanel() {
     applySettings();
   });
 
+  const optIconAuto = $('optIconAuto');
+  optIconAuto.addEventListener('change', () => {
+    state.settings.iconAutoFetch = optIconAuto.checked;
+    save();
+    // 打开时立刻为还没设置图标的站点补一轮（结果会写进数据）；关闭不清理已保存的地址
+    if (optIconAuto.checked) renderAll();
+  });
+
   // 图标大小 / 名称字号：拖动即时预览，松手落盘
   const optIconSize = $('optIconSize');
   const optLabelSize = $('optLabelSize');
@@ -250,6 +258,7 @@ function syncSettingsUI() {
   $('optNewTab').checked = s.openInNewTab;
   $('optLabels').checked = s.showLabels;
   $('optIconFrame').checked = s.iconFrame !== false;
+  $('optIconAuto').checked = !!s.iconAutoFetch;
   $('optPerRow').value = perRow();
   $('optIconSize').value = String(iconSize());
   $('optLabelSize').value = String(labelSize());

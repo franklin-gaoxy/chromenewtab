@@ -428,6 +428,50 @@ function runSmokeTests() {
           state.groups.map((g) => g.id).join(',')
         );
 
+        /* ---------------- 图标节点复用（切分组不重新请求） ---------------- */
+        const iconSvg =
+          '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">' +
+          '<rect width="32" height="32" fill="#09f"/></svg>';
+        const iconItem = {
+          id: 'i_icon',
+          url: 'https://example.com',
+          title: 'Icon',
+          icon: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(iconSvg)
+        };
+        const iconBoxA = document.createElement('div');
+        const iconBoxB = document.createElement('div');
+        paintIcon(iconBoxA, iconItem);
+        const iconImgA = iconBoxA.querySelector('img');
+        paintIcon(iconBoxB, iconItem);
+        const iconImgB = iconBoxB.querySelector('img');
+        ok(
+          'icon-img-reuse',
+          !!iconImgA && iconImgA === iconImgB,
+          iconImgA === iconImgB ? 'same-node' : 'rebuilt'
+        );
+
+        /* ---------------- 高清图标开关：默认关闭、不覆盖已有地址 ---------------- */
+        ok('icon-auto-off-default', state.settings.iconAutoFetch === false);
+
+        const plainItem = { id: 'i_plain', url: 'https://example.com', title: 'Plain' };
+        paintIcon(document.createElement('div'), plainItem);
+        ok('icon-auto-off-no-write', !plainItem.icon, String(plainItem.icon));
+
+        const keepIconAuto = state.settings.iconAutoFetch;
+        state.settings.iconAutoFetch = true;
+        let iconAutoSafe = true;
+        try {
+          paintIcon(document.createElement('div'), {
+            id: 'i_auto',
+            url: 'https://example.com',
+            title: 'Auto'
+          });
+        } catch (e) {
+          iconAutoSafe = false;
+        }
+        state.settings.iconAutoFetch = keepIconAuto;
+        ok('icon-auto-on-safe', iconAutoSafe);
+
         done();
       })
       .catch((err) => {

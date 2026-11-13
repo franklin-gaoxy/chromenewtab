@@ -106,6 +106,7 @@ state = {
   activeGroupId: 'g_xxx',
   settings: {
     lang: 'zh',            // 界面语言：zh | en（字典见 core/i18n.js）
+    iconAutoFetch: false,  // 自动获取高清图标（默认关闭，只使用固定地址）
     engine: 'bing',        // bing | google | baidu | ddg
     cat: 'web',            // web | images | news | videos | maps
     theme: 'forest',       // 预设 key 或 'custom'
@@ -247,12 +248,12 @@ aiData = {
 - 失败处理：非手动触发只更新 `#autoBackupStatus` 文本，不打扰；手动触发额外 `toast()`。权限失效时提示点「重新授权目录」（`autoBackupPickDir()` 重新走 `showDirectoryPicker`）。
 
 ### 3.10 站点图标
-- 渲染：`paintIcon()`（grid.js）优先 `item.icon`（用户手动选过的），否则 Chrome 本地 `faviconUrl(url, 128)` 先顶上，再由 `resolveIcon(item)` 异步解析高清源替换；「纯色底 + 首字」只在确实拿不到图（所有候选失败 / 自定义地址 404）时才出现，正常加载路径不会先闪文字。文件夹面板（`buildFolderGrid()`）复用同一函数与缓存。
+- 渲染（固定地址）：`paintIcon()`（grid.js）优先 `item.icon`（用户手动选过 / 「自动获取」写入的固定地址），否则固定用 `faviconUrl(url, 128)`（扩展内为 `chrome-extension://…/_favicon/?pageUrl=…&size=128`，非扩展环境走 DuckDuckGo 固定地址）；两者都失败才显示「纯色底 + 首字」。**默认不做任何探测、不换源**——已设置的图标不会自己变，也不额外依赖第三方网络。仅当设置「自动获取高清图标」（`settings.iconAutoFetch`，默认 `false`）打开时，才为 `item.icon` 为空的站点探测一次，并把结果**写回 `item.icon` 固化**（`iconAutoTried` 保证本会话每个磁贴只试一次，失败保持本地图标）；已设置的地址永不覆盖，之后关闭开关，已固化的地址继续生效。文件夹面板（`buildFolderGrid()`）复用同一函数。
 - 候选：`iconCandidateList(url)`（store.js）按「高清优先」给出 10 个来源 —— `favicon.im`（主域 → 根域，抓 apple-touch-icon）、`icon.horse`（根域 → 主域）、Clearbit logo、Google `s2?sz=256`、DuckDuckGo、站点根 `favicon.ico`、Chrome `_favicon`；子域站点靠 `rootDomainOf()` 回退根域（`xxx.feishu.cn` → `feishu.cn`）。
-- 解析：`resolveIcon()` 串行试候选（每张 2.5s 超时），按 `naturalWidth` 分档 —— ≥96px 直接采用、≥48px 记为备选、都不达标则回退第一张可用图；`isPlaceholderIcon()` 丢弃 1x1 像素与 `favicon.im` 的「灰底字母」占位 SVG（150×150）。进行中的任务进 `iconJobs` 去重。
-- 缓存：成功结果由 `rememberIcon()` 写入 `iconSrcCache`（内存）并持久化到 localStorage `qihang:icon-cache`（`{host: {src, ts}}`，TTL 7 天、上限 400 条，`loadIconCache()` 在脚本初始化时同步读回）。`paintIcon()` 命中缓存时直接 append `<img>`；图片 `error` 时 `forgetIcon()` 清缓存并重走解析。
+- 主动探测（仅手动）：编辑弹窗点「自动获取」时调 `resolveIcon()` —— **并发**请求候选前 8 个（每张 `ICON_TIMEOUT` = 5s 超时），按 `naturalWidth` 取最优（≥96px 优先、其次 ≥48px、再退回第一个可用），结果写进 `#fIcon` 随站点保存成固定地址；`_favicon` 这类不能固化的地址被 `isInternalFaviconUrl()` 过滤。`isPlaceholderIcon()` 丢弃 1x1 像素与 `favicon.im` 的「灰底字母」占位 SVG（150×150）。
+- 节点复用：`iconImgPool`（src → `HTMLImageElement[]`，上限 400）保存已加载过的 `<img>`。`showImage()` 优先取「同一 src 且当前不在页面上」的节点，只 `appendChild` 不重设 `src`，因此**切换分组重建磁贴时不会重新发请求、不会重新解码**；加载 `error` 的节点经 `dropIconImg()` 出池，避免复用到死图。
 - 圆角：`.tile-icon img` / `.f-item-icon img` 统一 `border-radius: 22%`，方形 favicon 也会被修成圆角；`body[data-icon-frame='off']` 时只去掉底板 / 边框 / 投影并放大到 `--tile-icon-size`。
-- 弹窗候选：`renderIconCandidates()`（link-modal.js）取候选前 6 个渲染成 `.icon-candidate` 方块，`onerror` 与小于 8px 的占位图自动移除，点击写入 `#fIcon`；`updateIconPreview()` 直接复用 `resolveIcon()`，预览不会出现占位图。
+- 弹窗候选：`renderIconCandidates()`（link-modal.js）取候选前 6 个渲染成 `.icon-candidate` 方块，`onerror` 与小于 8px 的占位图自动移除，点击写入 `#fIcon` 固定下来；`updateIconPreview()` 只展示「即将保存的固定地址」（`#fIcon` 或 `faviconUrl`），不触发探测。
 - 文字图标（用户自选）：编辑弹窗「文字图标」按钮展开 `#letterIconPanel`，输入 1~6 个字后由 `letterIconDataUrl(text, color)`（store.js）生成 SVG data URL —— 1~3 字单行、4 字 2+2、5 字 3+2、6 字 3+3，字号按最长行保守取值不出界；底色可选 8 个预设色块或直接填色号（`normalizeHexColor()` 归一化 `#abc` / `#aabbcc`），不选则按文字哈希取色，「换色」随机色相。生成结果只存 `letterIconValue` 变量（不往输入框里塞长地址），保存时写进 `item.icon`；再次编辑由 `letterIconSource()` 反解文字与底色回显，点「自动获取」清空恢复自动。
 - 文字图标显示：`item.icon` 是 `data:image/svg+xml` 时 `paintIcon()` 给容器加 `letter-tile`，图片按 `--tile-icon-size * 0.86` 铺开（`grid.css` / `folder.css`），多行小字才看得清；关闭统一底色时仍按底板满铺。
 - 刷新时机：URL 输入后 420ms 防抖（`scheduleIconCandidates()`）；打开弹窗立即渲染一次；`#fIcon` 变化只调 `syncCandidateActive()` 切选中态，不重建节点。
@@ -410,13 +411,13 @@ Get-ChildItem -Recurse src\js -Filter *.js | ForEach-Object { node --check $_.Fu
 
 # 2) IDE 诊断（在编辑器里对 src 执行 read_lints）
 
-# 3) 冒烟测试（页面内用例，46 项，退出码非 0 即失败）
+# 3) 冒烟测试（页面内用例，53 项，退出码非 0 即失败）
 node tools/smoke/run.js
 ```
 
 `tools/smoke/run.js` 会读 `src/newtab.html`，把 `tools/smoke/cases.js` 内联成 `src/__smoke.html`，用无头 Chrome/Edge 跑一遍并解析 `document.title`，最后删除临时文件（浏览器路径可用环境变量 `CHROME_PATH` 指定）。
 
-**新增用例**：只改 `tools/smoke/cases.js`，在对应分组里追加 `ok('名字', 断言, 失败细节)`；用例只能调用页面已有的全局函数。覆盖范围：文件夹合并 / 磁贴 / 面板（尺寸、列数、居中、滚轮不穿透、过滤）、备份往返、一层约束、同步字段白名单与合并、书签 HTML 层级、书签双向同步（内部伪造 `chrome.bookmarks`，不需要真扩展环境）、设置区块折叠、界面语言（切换生效 / DOM 填充 / 缺键回退）、定时备份到期判断（到点 / 当天只补一次 / 未到点 / 未启用）。
+**新增用例**：只改 `tools/smoke/cases.js`，在对应分组里追加 `ok('名字', 断言, 失败细节)`；用例只能调用页面已有的全局函数。覆盖范围：文件夹合并 / 磁贴 / 面板（尺寸、列数、居中、滚轮不穿透、过滤）、备份往返、一层约束、同步字段白名单与合并、书签 HTML 层级、书签双向同步（内部伪造 `chrome.bookmarks`，不需要真扩展环境）、设置区块折叠、界面语言（切换生效 / DOM 填充 / 缺键回退）、图标节点复用与高清图标开关（默认关闭 / 关闭不写数据 / 开启不报错）、定时备份到期判断（到点 / 当天只补一次 / 未到点 / 未启用）。
 
 ---
 
