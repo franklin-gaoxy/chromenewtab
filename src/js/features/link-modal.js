@@ -2,21 +2,37 @@
 
 /* ---------------- 链接编辑 ---------------- */
 let iconPreviewToken = 0;
+let iconPreviewTimer = 0;
+
+/* 只更新「首字占位」（纯本地计算）：输入过程中用，不触发任何图标请求 */
+function setPreviewLetter() {
+  const abs = normalizeUrl($('fUrl').value);
+  const title = $('fTitle').value.trim();
+  $('iconPreview').style.background = '';
+  $('iconPreviewImg').hidden = true;
+  const txt = $('iconPreviewText');
+  txt.hidden = false;
+  txt.textContent = firstChar(title || hostOf(abs) || '?');
+}
+
+/* 输入停顿后再更新真实图标（避免每敲一个字母就查一次图标） */
+function scheduleIconPreview() {
+  clearTimeout(iconPreviewTimer);
+  iconPreviewTimer = setTimeout(updateIconPreview, 700);
+}
 
 function updateIconPreview() {
   const abs = normalizeUrl($('fUrl').value);
   const custom = $('fIcon').value.trim() || letterIconValue || '';
   const title = $('fTitle').value.trim();
-  const box = $('iconPreview');
   const img = $('iconPreviewImg');
   const txt = $('iconPreviewText');
 
-  box.style.background = '';
-  img.hidden = true;
-  txt.hidden = false;
-  txt.textContent = firstChar(title || hostOf(abs) || '?');
+  setPreviewLetter();
 
   if (!abs && !custom) return;
+  // 域名还没输完整：先只显示首字，等输完再取图标
+  if (!custom && !hostLooksReady(abs)) return;
 
   // 预览只展示「将要保存的固定地址」，不做后台探测
   const src = custom || (abs ? faviconUrl(abs, 128) : '');
@@ -115,7 +131,6 @@ function syncLetterIconPanel() {
 }
 
 /* ---------------- 在线图标候选 ---------------- */
-let iconCandTimer = 0;
 let iconCandUrl = '';
 
 /* 候选来源统一由 store.js 的 iconCandidateList() 提供（高清优先、含根域回退） */
@@ -130,12 +145,20 @@ function syncCandidateActive() {
   });
 }
 
+/* 域名是否已输完整：避免 "ma" / "mail" 这种半截地址就去拉十几个图标 */
+function hostLooksReady(url) {
+  const host = hostOf(url);
+  if (!host) return false;
+  if (host === 'localhost') return true;
+  return host.indexOf('.') > 0;
+}
+
 function renderIconCandidates() {
   const box = $('iconCandidates');
   if (!box) return;
 
   const abs = normalizeUrl($('fUrl').value);
-  if (!abs) {
+  if (!abs || !hostLooksReady(abs)) {
     box.hidden = true;
     box.innerHTML = '';
     iconCandUrl = '';
@@ -181,11 +204,6 @@ function renderIconCandidates() {
     btn.appendChild(img);
     box.appendChild(btn);
   });
-}
-
-function scheduleIconCandidates() {
-  clearTimeout(iconCandTimer);
-  iconCandTimer = setTimeout(renderIconCandidates, 420);
 }
 
 function openLinkModal(opts) {
@@ -274,15 +292,19 @@ function saveLink() {
 
 /* ---------------- 事件绑定 ---------------- */
 function bindLinkEvents() {
-  $('fUrl').addEventListener('input', () => {
+  // 输入过程中只刷新首字占位：不查图标、不拉候选，避免每敲一个字母就请求一轮
+  $('fUrl').addEventListener('input', setPreviewLetter);
+  // 输完（离开输入框）才真正取一次图标 + 拉候选；URL 没变会直接复用，不重复请求
+  $('fUrl').addEventListener('blur', () => {
     updateIconPreview();
-    scheduleIconCandidates();
+    renderIconCandidates();
   });
-  $('fTitle').addEventListener('input', updateIconPreview);
+  $('fTitle').addEventListener('input', setPreviewLetter);
   $('fIcon').addEventListener('input', () => {
     letterIconValue = '';
     $('fIcon').placeholder = ficonPlaceholder();
-    updateIconPreview();
+    setPreviewLetter();
+    scheduleIconPreview();
     syncCandidateActive();
   });
 

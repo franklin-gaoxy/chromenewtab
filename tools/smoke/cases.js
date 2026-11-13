@@ -476,6 +476,20 @@ function runSmokeTests() {
         const candList = iconCandidateList('https://mail.qq.com/');
         ok('icon-candidates-many', candList.length >= 14, 'n=' + candList.length);
 
+        /* ---------------- 输入网址过程中不拉图标 ---------------- */
+        openLinkModal({ groupId: state.groups[0].id });
+        const urlField = document.getElementById('fUrl');
+        urlField.value = 'https://mail.qq.com';
+        urlField.dispatchEvent(new Event('input'));
+        const candBox = document.getElementById('iconCandidates');
+        ok('url-input-no-fetch', candBox.children.length === 0, 'n=' + candBox.children.length);
+        ok(
+          'url-input-letter-only',
+          document.getElementById('iconPreviewImg').hidden === true,
+          'hidden=' + document.getElementById('iconPreviewImg').hidden
+        );
+        closeModal('linkMask');
+
         done();
       })
       .catch((err) => {
