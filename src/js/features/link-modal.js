@@ -3,9 +3,12 @@
 /* ---------------- 链接编辑 ---------------- */
 let iconPreviewToken = 0;
 let iconPreviewTimer = 0;
+let idleIconTimer = 0;
 
-/* 只更新「首字占位」（纯本地计算）：输入过程中用，不触发任何图标请求 */
+/* 只更新「首字占位」（纯本地计算）：输入过程中用，不触发任何图标请求。
+   已经有自定义图标（文字图标 / 已选地址 / 上传）时直接不动，避免把预览刷掉。 */
 function setPreviewLetter() {
+  if ($('fIcon').value.trim() || letterIconValue) return;
   const abs = normalizeUrl($('fUrl').value);
   const title = $('fTitle').value.trim();
   $('iconPreview').style.background = '';
@@ -21,6 +24,20 @@ function scheduleIconPreview() {
   iconPreviewTimer = setTimeout(updateIconPreview, 700);
 }
 
+/* 停手 1.2s 后才去取网站图标与候选。
+   已经有文字图标 / 地址 / 上传图时：预览保持不动，但下方候选照常拉取，方便改选。 */
+function refreshIconForUrl() {
+  const abs = normalizeUrl($('fUrl').value);
+  if (!abs || !hostLooksReady(abs)) return;
+  if (!($('fIcon').value.trim() || letterIconValue)) updateIconPreview();
+  renderIconCandidates();
+}
+
+function scheduleIdleIconWork() {
+  clearTimeout(idleIconTimer);
+  idleIconTimer = setTimeout(refreshIconForUrl, 1200);
+}
+
 function updateIconPreview() {
   const abs = normalizeUrl($('fUrl').value);
   const custom = $('fIcon').value.trim() || letterIconValue || '';
@@ -28,11 +45,11 @@ function updateIconPreview() {
   const img = $('iconPreviewImg');
   const txt = $('iconPreviewText');
 
-  setPreviewLetter();
-
-  if (!abs && !custom) return;
-  // 域名还没输完整：先只显示首字，等输完再取图标
-  if (!custom && !hostLooksReady(abs)) return;
+  // 没有自定义图标时才画首字；有自定义图标就保持当前预览，不先隐藏（否则会闪）
+  if (!custom) {
+    setPreviewLetter();
+    if (!abs || !hostLooksReady(abs)) return;
+  }
 
   // 预览只展示「将要保存的固定地址」，不做后台探测
   const src = custom || (abs ? faviconUrl(abs, 128) : '');
@@ -51,13 +68,14 @@ function updateIconPreview() {
     txt.textContent = firstChar(title || hostOf(abs) || '?');
   };
 
-  if (img.getAttribute('src') === src && img.complete && img.naturalWidth) {
-    done();
+  // 同一地址不重设 src，直接复用已加载的图
+  if (img.getAttribute('src') === src) {
+    if (img.complete && img.naturalWidth) done();
     return;
   }
   img.onload = done;
   img.onerror = fail;
-  img.src = src;
+  img.src = src; // 不提前隐藏旧图，新图 ready 后直接替换
 }
 
 /* ---------------- 纯色文字图标 ---------------- */
@@ -98,6 +116,11 @@ function applyLetterIcon() {
     syncCandidateActive();
     return;
   }
+  // 底色只取一次：首次生成时随机固定，之后改文字不再换色
+  if (!letterIconBg) {
+    letterIconBg = LETTER_ICON_COLORS[Math.floor(Math.random() * LETTER_ICON_COLORS.length)];
+    $('letterIconColor').value = letterIconBg;
+  }
   letterIconValue = letterIconDataUrl(text, letterIconBg);
   // data URL 只存变量不写输入框，避免一长串地址出现在表单里
   $('fIcon').value = '';
@@ -116,7 +139,8 @@ function syncLetterIconPanel() {
   $('fIcon').placeholder = ficonPlaceholder();
   if (src) {
     $('letterIconText').value = src.text;
-    letterIconBg = /^#/.test(src.color || '') ? src.color : '';
+    // 回显原色（hex 或 hsl 都保留），否则重新编辑会换色
+    letterIconBg = src.color || '';
     $('letterIconColor').value = letterIconBg;
     panel.hidden = false;
     $('fIcon').value = '';
@@ -292,12 +316,15 @@ function saveLink() {
 
 /* ---------------- 事件绑定 ---------------- */
 function bindLinkEvents() {
-  // 输入过程中只刷新首字占位：不查图标、不拉候选，避免每敲一个字母就请求一轮
-  $('fUrl').addEventListener('input', setPreviewLetter);
-  // 输完（离开输入框）才真正取一次图标 + 拉候选；URL 没变会直接复用，不重复请求
+  // 输入过程中只刷新首字占位：不查图标、不拉候选
+  $('fUrl').addEventListener('input', () => {
+    setPreviewLetter();
+    scheduleIdleIconWork();
+  });
+  // 停手 1.2s 后才真正取图标与候选；离开输入框时立即补一次
   $('fUrl').addEventListener('blur', () => {
-    updateIconPreview();
-    renderIconCandidates();
+    clearTimeout(idleIconTimer);
+    refreshIconForUrl();
   });
   $('fTitle').addEventListener('input', setPreviewLetter);
   $('fIcon').addEventListener('input', () => {
@@ -379,8 +406,6 @@ function bindLinkEvents() {
     if (!letterIconText()) {
       const seed = $('fTitle').value.trim() || hostOf(normalizeUrl($('fUrl').value)) || '?';
       $('letterIconText').value = Array.from(seed).slice(0, 2).join('');
-      letterIconBg = '';
-      $('letterIconColor').value = '';
       applyLetterIcon();
     }
     $('letterIconText').focus();
