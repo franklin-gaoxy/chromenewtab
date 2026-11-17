@@ -18,5 +18,5 @@ desktop.ini
 *.tmp
 *.log
 
-# 发布包（只作为 Release 资产上传，不纳入版本控制）
-dist/*.zip
+# 打包产物与本地截图（只作为 Release 资产上传，不纳入版本控制）
+dist/

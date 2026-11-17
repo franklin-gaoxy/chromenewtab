@@ -20,7 +20,7 @@
 
 - 技术栈：原生 HTML / CSS / JavaScript（Manifest V3），**无框架、无构建、无第三方依赖**
 - 浏览器：Chrome / Edge 等 Chromium 内核浏览器（Chrome 100+）
-- 安装方式：从 [Releases](https://github.com/franklin-gaoxy/chromenewtab/releases/latest) 下载 `qihang-nav-1.2.0.zip` → 解压 → 「加载已解压的扩展程序」（见[安装](#二安装三步)）
+- 安装方式：从 [Releases](https://github.com/franklin-gaoxy/chromenewtab/releases/latest) 下载 `qihang-nav-1.2.1.zip` → 解压 → 「加载已解压的扩展程序」（见[安装](#二安装三步)）
 
 ---
 
@@ -81,6 +81,7 @@
 ### 7. 外观与数据
 - 内置多套背景（雾林、矢量雾林等），也可粘贴图片链接或上传本地图片
 - 可关闭图标下方名称
+- **图标本地缓存**：站点图标存在浏览器本地数据库（IndexedDB），渲染时直接读本地，断网也能显示；不弹出任何授权提示。其下的「每次优先从网络源获取」打开后会先取网络图，失败再回退本地缓存
 - **设置分组默认收起**：点击小标题展开 / 收起，展开过的区块会记住状态
 - **备份与恢复**：导出 / 导入 JSON（含分组、站点、设置）
 - **定时备份**：每天指定时间自动全量备份一次；保存位置可选「下载目录/qihang-backup」或自选文件夹，两种位置都会按保留天数自动清理过期备份。打开新标签页时才检查，错过当天的会在下次打开时补做
@@ -93,9 +94,9 @@
 
 发布包只通过 **Release 资产**分发（源码仓库内不含 zip，打包由发布流程生成）：
 
-- **下载地址**：[Releases · v1.2.0](https://github.com/franklin-gaoxy/chromenewtab/releases/tag/v1.2.0) → 点 `qihang-nav-1.2.0.zip`
+- **下载地址**：[Releases · v1.2.1](https://github.com/franklin-gaoxy/chromenewtab/releases/tag/v1.2.1) → 点 `qihang-nav-1.2.1.zip`
 
-1. **下载** `qihang-nav-1.2.0.zip`
+1. **下载** `qihang-nav-1.2.1.zip`
 2. **解压**到任意**固定位置**，例如 `D:\Extensions\qihang-nav`
    - 解压后的根目录里应能直接看到 `manifest.json` 和 `src/` 文件夹
    - 请保留该文件夹，浏览器加载的是解压后的目录，而不是 zip 本身
@@ -248,11 +249,11 @@ node tools/screenshot.js
 ```powershell
 # 1) 先把版本号改到 manifest.json（页脚、README 等一并同步）
 # 2) 打标签并推送，CI 自动打包上传到 Release 页面
-git tag -a v1.2.0 -m "qihang-nav v1.2.0"
-git push origin v1.2.0
+git tag -a v1.2.1 -m "qihang-nav v1.2.1"
+git push origin v1.2.1
 ```
 
-- 推送 `v*` 标签 → 创建/更新 `v1.2.0` Release，资产 `qihang-nav-1.2.0.zip`
+- 推送 `v*` 标签 → 创建/更新 `v1.2.1` Release，资产 `qihang-nav-1.2.1.zip`
 - 推送 `main` / `develop` → 更新 `main-latest` / `develop-latest` 的分支快照包（`qihang-nav-main.zip` / `qihang-nav-develop.zip`）
 - CI 会校验标签与 `manifest.json` 版本是否一致，不一致直接失败
 
@@ -260,7 +261,7 @@ git push origin v1.2.0
 
 ```powershell
 Compress-Archive -Path manifest.json,README.md,LICENSE,src,doc,server,tools `
-  -DestinationPath dist/qihang-nav-1.2.0.zip -Force
+  -DestinationPath dist/qihang-nav-1.2.1.zip -Force
 ```
 
 > 打包不含顶层文件夹：解压后的目录即扩展根目录（含 `manifest.json` 与 `src/`）。
