@@ -179,6 +179,8 @@ async function runAutoBackup(manual) {
   const s = state.settings;
   const now = new Date();
   const name = autoBackupFileName(now);
+  // 与手动导出保持同一份载荷（含组件配置）
+  await ensureWidgetMetaReady();
   const text = JSON.stringify(buildBackupPayload(), null, 2);
 
   autoBackupRunning = true;

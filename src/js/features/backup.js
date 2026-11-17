@@ -1,18 +1,72 @@
 /* 备份导出 / 导入（JSON 与浏览器书签） */
 
+/* ---------------- 组件元数据（不含会话等运行时数据） ---------------- */
+
+/* 组件把自己的「可备份配置」注册进来：load() 先把数据读进内存，export() 返回要写进备份的对象，
+   import(meta) 负责写回。组件文件在 backup.js 之后加载，注册发生在页面初始化阶段。 */
+const widgetMetaHooks = {};
+
+function registerWidgetMeta(type, hooks) {
+  if (!type || !hooks) return;
+  widgetMetaHooks[type] = hooks;
+}
+
+/* 导出前让各组件先准备数据（例如从独立存储读出模型与提示词） */
+function ensureWidgetMetaReady() {
+  const jobs = Object.keys(widgetMetaHooks).map((type) => {
+    const hooks = widgetMetaHooks[type];
+    if (!hooks || typeof hooks.load !== 'function') return null;
+    return Promise.resolve()
+      .then(() => hooks.load())
+      .catch(() => null);
+  });
+  return Promise.all(jobs);
+}
+
+function buildWidgetMetaPayload() {
+  const out = {};
+  Object.keys(widgetMetaHooks).forEach((type) => {
+    const hooks = widgetMetaHooks[type];
+    if (!hooks || typeof hooks.export !== 'function') return;
+    try {
+      const meta = hooks.export();
+      if (meta && typeof meta === 'object' && Object.keys(meta).length) out[type] = meta;
+    } catch (e) {
+      /* 单个组件导出失败不影响整份备份 */
+    }
+  });
+  return out;
+}
+
+async function applyWidgetMetaPayload(meta) {
+  if (!meta || typeof meta !== 'object') return;
+  for (const type of Object.keys(meta)) {
+    const hooks = widgetMetaHooks[type];
+    if (!hooks || typeof hooks.import !== 'function') continue;
+    try {
+      await hooks.import(meta[type]);
+    } catch (e) {
+      /* 单个组件导入失败不影响其它数据 */
+    }
+  }
+}
+
 /* ---------------- 数据导入导出 ---------------- */
 function buildBackupPayload() {
   return {
     app: 'qihang-nav',
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     groups: state.groups,
     activeGroupId: state.activeGroupId,
-    settings: state.settings
+    settings: state.settings,
+    widgets: buildWidgetMetaPayload()
   };
 }
 
-function exportData() {
+async function exportData() {
+  // 组件配置存在各自的存储里，先读出来再生成备份
+  await ensureWidgetMetaReady();
   const payload = buildBackupPayload();
   downloadBlob(
     JSON.stringify(payload, null, 2),
@@ -113,6 +167,8 @@ async function importData(file) {
     applySettings();
     renderAll();
     syncSettingsUI();
+    // 组件配置（如 AI 的模型与提示词）写回各自的存储；旧备份没有这一段时直接跳过
+    await applyWidgetMetaPayload(parsed.widgets);
     toast(i18n('settings.importDone', { n: totalItems() }));
   } catch (e) {
     toast(i18n('settings.importFailed'));

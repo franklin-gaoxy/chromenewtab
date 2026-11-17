@@ -28,3 +28,43 @@ WidgetRegistry.register({
     openAiChat();
   }
 });
+
+/* 备份：只带配置元数据（模型 / API Key / 提示词 / 开关），会话历史留在本机 */
+if (typeof registerWidgetMeta === 'function') {
+  registerWidgetMeta('ai', {
+    load() {
+      return loadAiData();
+    },
+
+    export() {
+      if (!aiData) return null;
+      return {
+        models: aiData.models,
+        activeModelId: aiData.activeModelId,
+        prompts: aiData.prompts,
+        options: aiData.options
+      };
+    },
+
+    async import(raw) {
+      const meta = raw && typeof raw === 'object' ? raw : {};
+      const cur = await loadAiData();
+      aiData = normalizeAiData({
+        models: Array.isArray(meta.models) ? meta.models : cur.models,
+        activeModelId: meta.activeModelId || cur.activeModelId,
+        prompts: Array.isArray(meta.prompts) ? meta.prompts : cur.prompts,
+        options: Object.assign({}, cur.options, meta.options || {}),
+        // 会话不随备份覆盖：保留本机现有对话
+        conversations: cur.conversations,
+        activeConvId: cur.activeConvId
+      });
+      saveAiDataNow();
+      // 弹窗正开着时同步刷新，避免还显示旧的模型列表
+      const mask = $('aiMask');
+      if (mask && !mask.hidden) {
+        aiRenderAll();
+        if ($('aiSetBody')) aiRenderSettings();
+      }
+    }
+  });
+}

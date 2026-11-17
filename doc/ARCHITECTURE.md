@@ -154,7 +154,9 @@ state = {
 
 `{ server, token, username, userId, lastSyncAt, rev }`。
 
-### 2.3 AI 数据（`aiData`，存储 key `qihang-ai-v1`，独立于导航备份）
+### 2.3 AI 数据（`aiData`，存储 key `qihang-ai-v1`，独立存储）
+
+> 备份里只有**配置元数据**（`models` / `activeModelId` / `prompts` / `options`，见第 3.9 节 `widgets.ai`），`conversations` / `activeConvId` 留在本机，导入时也不覆盖本机会话。
 
 ```js
 aiData = {
@@ -243,11 +245,11 @@ aiData = {
 
 - 到期判断：`autoBackupDue(now)` —— 未启用直接 false；`now` 早于当天 `autoBackupTime` 返回 false；`settings.autoBackupLastRun` 已是当天则返回 false（当天最多补一次）。
 - 触发时机：`initAutoBackup()`（`main.js` 的 `init()` 末尾）先查一次，之后每 60 秒 `checkAutoBackup()` 一次，窗口 `focus` 时再查一次。**不依赖 `chrome.alarms`，页面没打开就不备份，下次打开补做。**
-- 执行：`runAutoBackup(manual)` 用 `buildBackupPayload()` 生成与「导出备份」完全一致的全量 JSON：
+- 执行：`runAutoBackup(manual)` 先 `await ensureWidgetMetaReady()`，再用 `buildBackupPayload()` 生成与「导出备份」完全一致的全量 JSON（`groups` + `activeGroupId` + `settings` + `widgets` 组件配置元数据）：
   - `default` 模式 → `chrome.downloads.download()` 写 `下载目录/qihang-backup/qihang-nav-YYYY-MM-DD.json`（`conflictAction: 'overwrite'`，同日重复备份只保留一份），随后 `autoBackupCleanupDownloads()` 用 `downloads.search({})` 过滤 `qihang-backup/` 下的备份，超期项 `removeFile()` 删磁盘文件再 `erase()` 清记录（依赖下载记录存在，用户手动清过记录则不处理）
   - `custom` 模式 → 从 IndexedDB 取目录句柄 → `queryPermission('readwrite')` 必须为 `granted` → `getFileHandle(name, { create: true })` + `createWritable()` 写入 → `autoBackupCleanup()` 按 `autoBackupKeepDays` 遍历 `handle.values()` 删除过期文件（`keepDays <= 0` 不删）
 - 默认模式下的 `chrome.downloads` 相关能力需要 `manifest.json` 的 `downloads` 权限；「打开下载目录」走 `downloads.showDefaultFolder()`，仅默认模式显示，自定义模式改为显示「重新授权目录」。
-- 恢复：不新增路径，直接用同一区块的「导入备份」读取该 JSON（`importData()` → `normalizeData()`）。
+- 恢复：不新增路径，直接用同一区块的「导入备份」读取该 JSON（`importData()` → `normalizeData()` → `applyWidgetMetaPayload(parsed.widgets)`）。旧备份没有 `widgets` 字段时直接跳过，不影响导入。
 - 失败处理：非手动触发只更新 `#autoBackupStatus` 文本，不打扰；手动触发额外 `toast()`。权限失效时提示点「重新授权目录」（`autoBackupPickDir()` 重新走 `showDirectoryPicker`）。
 
 ### 3.10 站点图标
@@ -302,6 +304,18 @@ WidgetRegistry.register({
 3. 在 `src/newtab.html` 的组件脚本区按顺序加 `<script>`（registry.js 之后、main.js 之前）。
 4. 样式写到 `src/css/widgets.css`（或新建 css 并在 newtab.html 引入）。
 5. 更新本文件第 1 节目录树与 4.1 说明。
+
+**可选：让组件配置进备份** —— 在组件自己的文件里调用 `registerWidgetMeta(type, hooks)`（`features/backup.js` 提供）：
+
+```js
+registerWidgetMeta('weather', {
+  load() { return loadWeatherData(); },  // 导出前先读进内存（可异步）
+  export() { return { city, unit }; },   // 写进备份 JSON 的 widgets.weather
+  async import(meta) { /* 写回组件自己的存储 */ }
+});
+```
+
+`buildBackupPayload()` 会调用所有 `export()`，结果放进 `payload.widgets[type]`；`importData()` 在恢复导航数据后调用对应 `import(meta)`。**不要往这里放会话 / 日志这类运行时数据**（AI 组件只导出模型、提示词与开关）。单个组件抛错只跳过它自己，不影响整份备份。
 
 **禁止**在 `grid.js` / `picker.js` 里为具体组件写 `if (type === ...)` 分支。
 
@@ -418,13 +432,13 @@ Get-ChildItem -Recurse src\js -Filter *.js | ForEach-Object { node --check $_.Fu
 
 # 2) IDE 诊断（在编辑器里对 src 执行 read_lints）
 
-# 3) 冒烟测试（页面内用例，65 项，退出码非 0 即失败）
+# 3) 冒烟测试（页面内用例，67 项，退出码非 0 即失败）
 node tools/smoke/run.js
 ```
 
 `tools/smoke/run.js` 会读 `src/newtab.html`，把 `tools/smoke/cases.js` 内联成 `src/__smoke.html`，用无头 Chrome/Edge 跑一遍并解析 `document.title`，最后删除临时文件（浏览器路径可用环境变量 `CHROME_PATH` 指定）。
 
-**新增用例**：只改 `tools/smoke/cases.js`，在对应分组里追加 `ok('名字', 断言, 失败细节)`；用例只能调用页面已有的全局函数。覆盖范围：文件夹合并 / 磁贴 / 面板（尺寸、列数、居中、滚轮不穿透、过滤）、备份往返、一层约束、同步字段白名单与合并、书签 HTML 层级、书签双向同步（内部伪造 `chrome.bookmarks`，不需要真扩展环境）、设置区块折叠、界面语言（切换生效 / DOM 填充 / 缺键回退）、图标节点复用与高清图标开关（默认关闭 / 关闭不写数据 / 开启不报错）、图标候选数量与「输入网址不拉图 / 不覆盖已选图标 / 已选文字图标仍拉候选」、图标本地缓存开关默认值与二级开关联动（65 项）、定时备份到期判断（到点 / 当天只补一次 / 未到点 / 未启用）。
+**新增用例**：只改 `tools/smoke/cases.js`，在对应分组里追加 `ok('名字', 断言, 失败细节)`；用例只能调用页面已有的全局函数。覆盖范围：文件夹合并 / 磁贴 / 面板（尺寸、列数、居中、滚轮不穿透、过滤）、备份往返、一层约束、同步字段白名单与合并、书签 HTML 层级、书签双向同步（内部伪造 `chrome.bookmarks`，不需要真扩展环境）、设置区块折叠、界面语言（切换生效 / DOM 填充 / 缺键回退）、图标节点复用与高清图标开关（默认关闭 / 关闭不写数据 / 开启不报错）、图标候选数量与「输入网址不拉图 / 不覆盖已选图标 / 已选文字图标仍拉候选」、图标本地缓存开关默认值与二级开关联动、备份载荷含组件配置元数据且不含会话（67 项）、定时备份到期判断（到点 / 当天只补一次 / 未到点 / 未启用）。
 
 ---
 

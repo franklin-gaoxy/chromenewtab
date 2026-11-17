@@ -103,6 +103,38 @@ function runSmokeTests() {
     const restoredFolder = restored.groups[0].items.find((it) => it.kind === 'folder');
     ok('backup-roundtrip', !!restoredFolder && restoredFolder.items.length === 2);
 
+    /* ---------------- 备份载荷：含组件配置元数据、不含会话 ---------------- */
+    const keepAiData = aiData;
+    aiData = normalizeAiData({
+      models: [
+        {
+          id: 'm_test',
+          name: 'Test',
+          base: 'https://api.test/v1',
+          model: 'test-model',
+          key: 'sk-test',
+          temperature: 0.5
+        }
+      ],
+      activeModelId: 'm_test',
+      prompts: [],
+      conversations: [{ id: 'c_test', title: 'C', messages: [{ role: 'user', content: 'hi' }] }]
+    });
+    const metaPayload = buildBackupPayload();
+    ok(
+      'backup-widgets-meta',
+      !!metaPayload.widgets &&
+        !!metaPayload.widgets.ai &&
+        metaPayload.widgets.ai.models[0].key === 'sk-test',
+      JSON.stringify(metaPayload.widgets)
+    );
+    ok(
+      'backup-no-conversations',
+      JSON.stringify(metaPayload.widgets).indexOf('conversations') < 0,
+      'conversations-leaked'
+    );
+    aiData = keepAiData;
+
     const nested = normalizeData({
       groups: [
         {
