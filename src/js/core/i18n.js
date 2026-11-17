@@ -165,6 +165,10 @@ const I18N = {
     'settings.iconFrameTip': '关闭后图标按原始形状铺满，不再有统一底板、边框和投影，接近站点自身的 logo 效果。',
     'settings.iconAuto': '自动获取高清图标',
     'settings.iconAutoTip': '默认关闭：所有站点都用固定地址（你设置的图标，或浏览器本地图标），不会自动变化。开启后只为还没设置图标的站点挑一次高清源，结果会写进站点数据并固定下来；已设置的图标不会被覆盖，之后再关闭开关也不影响已保存的地址。',
+    'settings.iconCache': '缓存站点图标到本地',
+    'settings.iconCacheTip': '图标保存在浏览器本地数据库（IndexedDB），渲染时直接读本地，不发网络请求，断网也能显示。不会弹出任何授权提示；关闭后不再读写缓存，也不影响已经显示出来的图标。',
+    'settings.iconNetFirst': '每次优先从网络源获取',
+    'settings.iconNetFirstTip': '开启后先尝试从网络获取最新图标，成功就更新本地缓存；失败或超时自动回退到本地缓存。关闭时始终优先读本地。',
 
     /* 设置：布局 */
     'settings.layout': '布局',
@@ -562,6 +566,10 @@ const I18N = {
     'settings.iconFrameTip': 'When off, icons fill the tile in their original shape — no plate, border or shadow, closer to the site logo itself.',
     'settings.iconAuto': 'Fetch high-res icons automatically',
     'settings.iconAutoTip': 'Off by default: every site uses a fixed address (the icon you set, or the browser favicon), so it never changes. When on, sites without an icon get one high-res source picked once and saved into the site data; icons you already set are never overwritten, and turning the switch off later keeps the saved addresses.',
+    'settings.iconCache': 'Cache site icons locally',
+    'settings.iconCacheTip': 'Icons are stored in a local browser database (IndexedDB) and read from disk on every render — no network request, and they still show offline. No permission prompt is ever shown. Turning it off stops all cache reads/writes and does not hide icons already on screen.',
+    'settings.iconNetFirst': 'Try the network source first every time',
+    'settings.iconNetFirstTip': 'When on, the latest icon is fetched from the network first and written back to the local cache; if it fails or times out, the local cached icon is used. When off, the local cache always wins.',
 
     'settings.layout': 'Layout',
     'settings.perRow': 'Icons per row',

@@ -84,8 +84,11 @@ function resolveIcon(item) {
   });
 }
 
-/* 本次会话已尝试过自动补图的磁贴，避免切分组时反复探测 */
+/* 本次会话已尝试过「网络探测图标」的磁贴，避免切分组时反复请求 */
 const iconAutoTried = new Set();
+
+/* 绘制令牌：同一容器被重新绘制后，旧的异步回调不再往里面塞图 */
+let iconPaintSeq = 0;
 
 /* 已加载过的图标 <img> 节点池：切换分组重建磁贴时直接复用节点，
    浏览器不会重新发请求、也不会重新解码，慢网下不会「等一会儿才出现」 */
@@ -137,6 +140,13 @@ function paintIcon(container, item) {
   const hue = hashHue(label || item.url);
   const host = hostOf(item.url);
   const custom = String(item.icon || '').trim();
+
+  // 每次绘制分配一个令牌：异步读缓存回来后若容器已被重绘，直接丢弃结果
+  const token = ++iconPaintSeq;
+  container.dataset.iconPaint = String(token);
+  const alive = () => container.dataset.iconPaint === String(token);
+  const cacheOn = !!state.settings.iconCache;
+  const netFirst = cacheOn && !!state.settings.iconCacheNetFirst;
 
   let seq = 0;
   container.classList.remove('letter-tile');
@@ -194,8 +204,47 @@ function paintIcon(container, item) {
 
   // 未设置图标：用浏览器本地图标（固定地址，扩展内是 _favicon?pageUrl=…&size=128）
   const fixed = faviconUrl(item.url, 128);
-  if (fixed) showImage(fixed, showLetter);
-  else showLetter();
+  const showFixed = () => {
+    if (fixed) showImage(fixed, showLetter);
+    else showLetter();
+  };
+
+  /* 直接读本地缓存（IndexedDB）：命中就用 Blob，未命中退回浏览器本地图标，
+     同时把这张图标写进缓存，下次渲染就能命中 */
+  const showCached = () => {
+    iconCacheLoad(item.url)
+      .then((src) => {
+        if (!alive()) return;
+        if (src) {
+          showImage(src, showLetter);
+          return;
+        }
+        showFixed();
+        iconCacheWarm(item.url, fixed).catch(() => { /* 写缓存失败不影响显示 */ });
+      })
+      .catch(() => {
+        if (alive()) showFixed();
+      });
+  };
+
+  if (!cacheOn) {
+    showFixed();
+  } else if (netFirst) {
+    // 本地先兜底上屏；网络拿到图标再替换，失败就保持本地，不再请求
+    showCached();
+    if (item.url && !iconAutoTried.has(item.id)) {
+      iconAutoTried.add(item.id);
+      resolveIcon({ url: item.url })
+        .then((src) => {
+          if (!src || isInternalFaviconUrl(src) || !alive()) return;
+          showImage(src, showLetter);
+          iconCacheWarm(item.url, src, true).catch(() => { /* 回写失败不影响显示 */ });
+        })
+        .catch(() => { /* 网络失败保持本地缓存 */ });
+    }
+  } else {
+    showCached();
+  }
 
   // 开关打开时才补高清图：只为「没设置过图标」的站点挑一次，结果固化进 item.icon。
   // 固化之后即使再关掉开关，地址仍然生效，不会出现图标缺失或变化。

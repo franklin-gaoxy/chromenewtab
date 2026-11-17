@@ -124,7 +124,7 @@
           </div>
           <div class="letter-icon-row">
             <div class="letter-icon-colors" id="letterIconColors"></div>
-            <input id="letterIconColor" type="text" maxlength="9" placeholder="#3b82f6" spellcheck="false" />
+            <input id="letterIconColor" type="text" maxlength="24" placeholder="#3b82f6" spellcheck="false" />
           </div>
         </div>
         <div class="icon-candidates" id="iconCandidates" hidden></div>
@@ -203,6 +203,20 @@
           <i class="switch"></i>
         </label>
         <p class="tip" data-i18n="settings.iconAutoTip">关闭时只用浏览器本地图标（固定地址，不会变化）。开启后只为还没设置图标的站点自动挑一次高清源，结果写进站点数据后固定；已设置的图标不会被覆盖，关闭开关也不影响已保存的地址。</p>
+
+        <label class="switch-row">
+          <span data-i18n="settings.iconCache">缓存站点图标到本地</span>
+          <input type="checkbox" id="optIconCache" />
+          <i class="switch"></i>
+        </label>
+        <p class="tip" data-i18n="settings.iconCacheTip">图标保存在浏览器本地数据库（IndexedDB），渲染时直接读本地，不发网络请求，断网也能显示。不会弹出任何授权提示；关闭后不再读写缓存，也不影响已经显示出来的图标。</p>
+
+        <label class="switch-row" id="optIconNetFirstRow">
+          <span data-i18n="settings.iconNetFirst">每次优先从网络源获取</span>
+          <input type="checkbox" id="optIconNetFirst" />
+          <i class="switch"></i>
+        </label>
+        <p class="tip" data-i18n="settings.iconNetFirstTip">开启后先尝试从网络获取最新图标，成功就更新本地缓存；失败或超时自动回退到本地缓存。关闭时始终优先读本地。</p>
 
       </section>
 
@@ -328,7 +342,7 @@
     </div>
 
     <footer class="drawer-foot">
-      <span class="version">启航 · v1.2.0</span>
+      <span class="version">启航 · v1.2.1</span>
       <div class="spacer"></div>
       <button class="primary-btn" data-close="settingsMask" data-i18n="common.done">完成</button>
     </footer>
@@ -348,6 +362,7 @@
 <script src="js/core/state.js"></script>
 <script src="js/core/data.js"></script>
 <script src="js/core/media.js"></script>
+<script src="js/core/icon-cache.js"></script>
 
 <!-- 功能模块 -->
 <script src="js/features/preferences.js"></script>

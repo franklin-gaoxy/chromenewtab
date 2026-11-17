@@ -106,6 +106,25 @@ function buildSettingsPanel() {
     if (optIconAuto.checked) renderAll();
   });
 
+  const optIconCache = $('optIconCache');
+  const optIconNetFirst = $('optIconNetFirst');
+  optIconCache.addEventListener('change', () => {
+    state.settings.iconCache = optIconCache.checked;
+    save();
+    syncIconCacheSwitch();
+    // 开关切换会改变读取路径，清掉会话内的探测标记后重绘；打开时批量补一轮缓存
+    iconAutoTried.clear();
+    renderAll();
+    if (optIconCache.checked) iconCachePrefetch();
+  });
+  optIconNetFirst.addEventListener('change', () => {
+    state.settings.iconCacheNetFirst = optIconNetFirst.checked;
+    save();
+    syncIconCacheSwitch();
+    iconAutoTried.clear();
+    renderAll();
+  });
+
   // 图标大小 / 名称字号：拖动即时预览，松手落盘
   const optIconSize = $('optIconSize');
   const optLabelSize = $('optLabelSize');
@@ -244,6 +263,18 @@ function initCollapsibleSections() {
   syncCollapseUI();
 }
 
+/* 本地缓存开关 + 其下的「优先网络」开关（缓存关闭时后者不可用） */
+function syncIconCacheSwitch() {
+  const s = state.settings;
+  const on = !!s.iconCache;
+  $('optIconCache').checked = on;
+  const net = $('optIconNetFirst');
+  net.checked = on && !!s.iconCacheNetFirst;
+  net.disabled = !on;
+  const row = $('optIconNetFirstRow');
+  if (row) row.classList.toggle('is-off', !on);
+}
+
 function syncSettingsUI() {
   const s = state.settings;
   document.querySelectorAll('#langChips .chip').forEach((chip) => {
@@ -259,6 +290,7 @@ function syncSettingsUI() {
   $('optLabels').checked = s.showLabels;
   $('optIconFrame').checked = s.iconFrame !== false;
   $('optIconAuto').checked = !!s.iconAutoFetch;
+  syncIconCacheSwitch();
   $('optPerRow').value = perRow();
   $('optIconSize').value = String(iconSize());
   $('optLabelSize').value = String(labelSize());

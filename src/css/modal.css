@@ -442,6 +442,12 @@
 }
 
 .switch-row input:checked + .switch { background: #3fbd8c; }
+
+/* 依赖上一项开关的二级开关：上一项关闭时置灰，点不动 */
+.switch-row.is-off {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .switch-row input:checked + .switch::after { transform: translateX(16px); }
 
 .tip {

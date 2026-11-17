@@ -113,6 +113,8 @@ const THEMES = [
 const DEFAULT_SETTINGS = {
   lang: 'zh',         // 界面语言：zh | en（见 core/i18n.js）
   iconAutoFetch: false, // 自动获取高清图标（默认关闭：只用固定地址）
+  iconCache: true,      // 站点图标缓存到本地 IndexedDB（默认开启，渲染直接读本地）
+  iconCacheNetFirst: false, // 每次优先从网络源获取（失败再回退本地缓存）
   engine: 'bing',
   cat: 'web',
   theme: 'forest',
@@ -290,6 +292,7 @@ function letterIconDataUrl(text, color, size) {
   const total = Array.from(lines.join('')).length;
   const raw = String(color || '');
   // 只接受 #rrggbb / hsl(...)，其余按文字哈希取色
+  // 颜色由调用方固定传入（首次随机选定后不再变）；缺省时仍按文字哈希兜底
   const bg = /^#[0-9a-f]{6}$/i.test(raw) || /^hsl\(/i.test(raw)
     ? raw
     : 'hsl(' + hashHue(lines.join('')) + ' 52% 46%)';

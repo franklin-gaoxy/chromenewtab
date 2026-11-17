@@ -472,6 +472,35 @@ function runSmokeTests() {
         state.settings.iconAutoFetch = keepIconAuto;
         ok('icon-auto-on-safe', iconAutoSafe);
 
+        /* ---------------- 图标本地缓存开关（IndexedDB） ---------------- */
+        ok('icon-cache-default', state.settings.iconCache === true);
+        ok('icon-cache-net-first-default', state.settings.iconCacheNetFirst === false);
+
+        const cacheBox = document.getElementById('optIconCache');
+        const netBox = document.getElementById('optIconNetFirst');
+        ok('icon-cache-switch-exists', !!cacheBox && !!netBox);
+
+        const keepIconCache = state.settings.iconCache;
+        state.settings.iconCache = false;
+        syncIconCacheSwitch();
+        ok('icon-cache-subswitch-disabled', netBox.disabled === true);
+
+        let iconCacheOffSafe = true;
+        try {
+          paintIcon(document.createElement('div'), {
+            id: 'i_cache_off',
+            url: 'https://example.com',
+            title: 'CacheOff'
+          });
+        } catch (e) {
+          iconCacheOffSafe = false;
+        }
+        ok('icon-cache-off-safe', iconCacheOffSafe);
+
+        state.settings.iconCache = keepIconCache;
+        syncIconCacheSwitch();
+        ok('icon-cache-subswitch-restored', netBox.disabled === !keepIconCache);
+
         /* ---------------- 图标候选来源数量 ---------------- */
         const candList = iconCandidateList('https://mail.qq.com/');
         ok('icon-candidates-many', candList.length >= 14, 'n=' + candList.length);
@@ -488,6 +517,35 @@ function runSmokeTests() {
           document.getElementById('iconPreviewImg').hidden === true,
           'hidden=' + document.getElementById('iconPreviewImg').hidden
         );
+        closeModal('linkMask');
+
+        /* ---------------- 已选文字图标时，输入地址不覆盖预览 ---------------- */
+        openLinkModal({ groupId: state.groups[0].id });
+        letterIconValue = letterIconDataUrl('测', '#3b82f6');
+        updateIconPreview();
+        const keptSrc = document.getElementById('iconPreviewImg').getAttribute('src');
+        const urlField2 = document.getElementById('fUrl');
+        urlField2.value = 'https://mail.qq.com';
+        urlField2.dispatchEvent(new Event('input'));
+        ok(
+          'letter-icon-kept',
+          document.getElementById('iconPreviewImg').getAttribute('src') === keptSrc,
+          'src-changed'
+        );
+
+        // 停手后仍应拉候选供改选，但预览继续显示文字图标
+        refreshIconForUrl();
+        ok(
+          'letter-icon-candidates-still',
+          document.getElementById('iconCandidates').children.length > 0,
+          'n=' + document.getElementById('iconCandidates').children.length
+        );
+        ok(
+          'letter-icon-preview-kept',
+          document.getElementById('iconPreviewImg').getAttribute('src') === keptSrc,
+          'src-changed'
+        );
+        letterIconValue = '';
         closeModal('linkMask');
 
         done();
