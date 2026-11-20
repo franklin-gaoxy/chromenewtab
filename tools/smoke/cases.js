@@ -579,6 +579,83 @@ function runSmokeTests() {
         );
         letterIconValue = '';
         closeModal('linkMask');
+      })
+      .then(async () => {
+        /* ---------------- AI：温度可选 + 模型只支持默认温度时自动重试 ---------------- */
+        ok('ai-temp-empty-null', aiNormalizeTemperature('') === null);
+        ok('ai-temp-undef-null', aiNormalizeTemperature(undefined) === null);
+        ok('ai-temp-clamp', aiNormalizeTemperature(9) === 2 && aiNormalizeTemperature(-1) === 0);
+        ok('ai-temp-number', aiNormalizeTemperature('0.3') === 0.3);
+
+        const realFetch = window.fetch;
+        const bodies = [];
+        const mockFetch = (failFirstTime) => {
+          bodies.length = 0;
+          let n = 0;
+          window.fetch = function (url, init) {
+            const body = JSON.parse(init.body);
+            bodies.push(body);
+            n += 1;
+            const fail = failFirstTime && n === 1;
+            const payload = fail
+              ? {
+                  error: {
+                    message:
+                      "Unsupported value: 'temperature' does not support 0.7 with this model. " +
+                      'Only the default (1) value is supported.'
+                  }
+                }
+              : { choices: [{ message: { content: 'ok' } }] };
+            return Promise.resolve(
+              new Response(JSON.stringify(payload), {
+                status: fail ? 400 : 200,
+                headers: { 'Content-Type': 'application/json' }
+              })
+            );
+          };
+        };
+
+        const smokeModel = {
+          id: 'm_smoke_temp',
+          name: 'smoke',
+          base: 'https://smoke.local/v1',
+          model: 'gpt-x',
+          key: '',
+          temperature: 0.7
+        };
+
+        mockFetch(true);
+        let reply = '';
+        try {
+          reply = await aiChatCompletion({
+            model: smokeModel,
+            messages: [{ role: 'user', content: 'hi' }]
+          });
+        } catch (e) {
+          reply = 'ERR:' + (e && e.message);
+        }
+        ok('ai-temp-retry-reply', reply === 'ok', reply);
+        ok('ai-temp-retry-calls', bodies.length === 2, 'calls=' + bodies.length);
+        ok('ai-temp-retry-first-has', !!bodies[0] && bodies[0].temperature === 0.7);
+        ok('ai-temp-retry-second-none', !!bodies[1] && !('temperature' in bodies[1]));
+
+        mockFetch(false);
+        const noTempModel = Object.assign({}, smokeModel, { temperature: null });
+        try {
+          await aiChatCompletion({
+            model: noTempModel,
+            messages: [{ role: 'user', content: 'hi' }]
+          });
+        } catch (e) {
+          /* 忽略：只关心请求体 */
+        }
+        ok(
+          'ai-temp-null-omitted',
+          bodies.length === 1 && !('temperature' in bodies[0]),
+          'calls=' + bodies.length
+        );
+
+        window.fetch = realFetch;
 
         done();
       })

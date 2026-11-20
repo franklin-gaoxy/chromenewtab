@@ -160,7 +160,7 @@ state = {
 
 ```js
 aiData = {
-  models: [{ id, name, base, model, key, temperature }],
+  models: [{ id, name, base, model, key, temperature }], // temperature: 0~2 的数字，或 null = 不发送（用模型默认值）
   activeModelId: 'model_deepseek',
   prompts: [{ id, title, content }],
   conversations: [{
@@ -207,6 +207,8 @@ aiData = {
 ### 3.5 AI 对话
 点击 AI 磁贴 → `openAiChat()`（chat.js）→ `loadAiData()` → `aiEnsureConversation()` → `aiRenderAll()` → 用户发送 → `aiSendMessage()` → `aiChatCompletion()`（api.js，OpenAI 兼容 `/chat/completions`）→ 写回 `conversations` → `saveAiDataNow()`。
 设置按钮切换 `.ai-shell.show-settings`，内容由 `aiRenderSettings(tab)`（settings.js）渲染。
+
+请求参数：`temperature` 仅在模型配置为数字（0~2）时发送；配置为 `null`（设置页留空）时省略该字段。部分新模型（如 GPT-5 系列）只接受默认温度，传值会返回 400，此时 `aiChatCompletion()` 会识别错误消息里的 `temperature` 并去掉该参数自动重试一次（仅重试一次）。
 
 ### 3.6 书签侧边栏
 `bindBookmarkEvents()`（bookmarks.js）在页面加载时创建右侧悬浮按钮 `.bm-handle` 与面板 `.bm-panel`。

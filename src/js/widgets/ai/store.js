@@ -39,6 +39,14 @@ function aiDefaults() {
 let aiData = null;
 let aiSaveTimer = 0;
 
+/* 温度：null 表示不发送该参数，由接口使用自身默认值（部分新模型只支持默认值） */
+function aiNormalizeTemperature(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  return Math.min(2, Math.max(0, Math.round(n * 100) / 100));
+}
+
 function normalizeAiData(raw) {
   const data = raw && typeof raw === 'object' ? raw : {};
   const base = aiDefaults();
@@ -51,7 +59,7 @@ function normalizeAiData(raw) {
       base: String(m.base).trim(),
       model: String(m.model).trim(),
       key: typeof m.key === 'string' ? m.key : '',
-      temperature: Number.isFinite(Number(m.temperature)) ? Number(m.temperature) : 0.7
+      temperature: aiNormalizeTemperature(m.temperature)
     }));
 
   const prompts = (Array.isArray(data.prompts) ? data.prompts : [])

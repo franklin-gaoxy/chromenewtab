@@ -54,11 +54,16 @@ function aiRenderModelSettings(body) {
 
     const info = document.createElement('div');
     info.className = 'ai-model-info';
+    const tempText =
+      typeof model.temperature === 'number' && Number.isFinite(model.temperature)
+        ? i18n('ai.tempMeta', { value: model.temperature })
+        : i18n('ai.tempDefault');
     info.innerHTML =
       '<div class="ai-model-name">' + esc(model.name) +
         (model.id === aiData.activeModelId ? '<span class="ai-model-badge">' + esc(i18n('ai.inUse')) + '</span>' : '') +
       '</div>' +
-      '<div class="ai-model-meta">' + esc(model.model) + ' · ' + esc(model.base) + '</div>';
+      '<div class="ai-model-meta">' + esc(model.model) + ' · ' + esc(model.base) +
+        ' · ' + esc(tempText) + '</div>';
 
     const actions = document.createElement('div');
     actions.className = 'ai-model-actions';
@@ -123,6 +128,9 @@ function aiModelForm(model) {
         '<input id="aiMModel" type="text" placeholder="deepseek-chat" spellcheck="false" /></label>' +
       '<label class="ai-field"><span>' + esc(i18n('ai.fieldKey')) + '</span>' +
         '<input id="aiMKey" type="password" placeholder="' + esc(i18n('ai.keyPh')) + '" spellcheck="false" /></label>' +
+      '<label class="ai-field"><span>' + esc(i18n('ai.fieldTemp')) + '</span>' +
+        '<input id="aiMTemp" type="number" min="0" max="2" step="0.1" placeholder="' + esc(i18n('ai.tempPh')) + '" />' +
+        '<em class="ai-field-hint">' + esc(i18n('ai.tempTip')) + '</em></label>' +
       '<div class="ai-form-actions">' +
         '<button class="mini-btn" id="aiMCancel" type="button">' + esc(i18n('common.cancel')) + '</button>' +
         '<button class="mini-btn primary" id="aiMSave" type="button">' + esc(i18n('common.save')) + '</button>' +
@@ -133,6 +141,10 @@ function aiModelForm(model) {
   $('aiMBase').value = isNew ? 'https://api.deepseek.com/v1' : model.base;
   $('aiMModel').value = isNew ? '' : model.model;
   $('aiMKey').value = isNew ? '' : model.key;
+  $('aiMTemp').value =
+    !isNew && typeof model.temperature === 'number' && Number.isFinite(model.temperature)
+      ? model.temperature
+      : '';
 
   $('aiMCancel').addEventListener('click', () => aiRenderSettings('models'));
 
@@ -141,10 +153,21 @@ function aiModelForm(model) {
     const base = $('aiMBase').value.trim().replace(/\/+$/, '');
     const modelName = $('aiMModel').value.trim();
     const key = $('aiMKey').value.trim();
+    const tempRaw = $('aiMTemp').value.trim();
 
     if (!base || !modelName) {
       toast(i18n('ai.needBaseModel'));
       return;
+    }
+
+    let temperature = null;
+    if (tempRaw !== '') {
+      const n = Number(tempRaw);
+      if (!Number.isFinite(n) || n < 0 || n > 2) {
+        toast(i18n('ai.tempInvalid'));
+        return;
+      }
+      temperature = aiNormalizeTemperature(n);
     }
 
     if (isNew) {
@@ -154,7 +177,7 @@ function aiModelForm(model) {
         base,
         model: modelName,
         key,
-        temperature: 0.7
+        temperature
       };
       aiData.models.push(item);
       if (!aiData.activeModelId) aiData.activeModelId = item.id;
@@ -163,6 +186,7 @@ function aiModelForm(model) {
       model.base = base;
       model.model = modelName;
       model.key = key;
+      model.temperature = temperature;
     }
 
     saveAiDataNow();
